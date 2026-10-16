@@ -1,0 +1,266 @@
+"""Statisches HTML-Dashboard (GitHub Pages)."""
+from __future__ import annotations
+
+import html
+import math
+import os
+
+import pandas as pd
+
+ROOT = os.path.join(os.path.dirname(__file__), "..")
+
+WEEKDAY = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+
+
+def _pct(x, digits=1, sign=True):
+    if x is None or (isinstance(x, float) and math.isnan(x)):
+        return "–"
+    s = f"{x * 100:+.{digits}f}" if sign else f"{x * 100:.{digits}f}"
+    return s.replace(".", ",") + " %"
+
+
+def _num(x, digits=2):
+    if x is None or (isinstance(x, float) and math.isnan(x)):
+        return "–"
+    s = f"{x:,.{digits}f}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _e(s) -> str:
+    return html.escape(str(s))
+
+
+BADGE = {
+    "Einstieg": ('<span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>'
+                 'Einstieg</span>'),
+    "Halten": ('<span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/>'
+               '</svg>Halten</span>'),
+    "Ausstieg": ('<span class="badge crit"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9 1 2h8z"/></svg>'
+                 'Ausstieg</span>'),
+}
+
+
+def _cr_bar(cr: float, lim: float = 1.0) -> str:
+    v = max(-lim, min(lim, cr))
+    w = abs(v) / lim * 50
+    left = 50 if v >= 0 else 50 - w
+    return (f'<span class="crbar" title="Chance/Risiko {cr:+.2f}"><span class="mid"></span>'
+            f'<span class="fill" style="left:{left:.1f}%;width:{w:.1f}%"></span></span>')
+
+
+def _row(r: pd.Series) -> str:
+    detail = "".join(
+        f"<tr><td>{_e(d['firm'])}</td><td class='num'>{_num(d['target'])}</td>"
+        f"<td class='num'>{_pct(d['weight'], 0, False)}</td></tr>" for d in r["analyst_detail"])
+    method_cls = "mv" if r["analyst_method"] == "Minimum-Varianz" else "fb"
+    method_lbl = "MV" if method_cls == "mv" else "Konsens"
+    reasons = "".join(f"<li>{_e(x)}</li>" for x in r["reasons"])
+    trend = {1: "auf", 0: "gemischt", -1: "ab"}.get(r["trend"], "–")
+    return f"""
+<tr class="main">
+  <td class="num rank opt">{int(r['rank'])}</td>
+  <td class="title"><span class="nm">{_e(r['name'])}</span><span class="tk">{_e(r['ticker'])} · {_e(r['region'])}</span></td>
+  <td>{BADGE[r['signal']]}</td>
+  <td class="num"><span class="crval">{r['cr']:+.2f}</span>{_cr_bar(r['cr'])}</td>
+  <td class="num strong">{_pct(r['x'])}</td>
+  <td class="num opt">± {_pct(r['sd'], 1, False)}</td>
+  <td class="num opt">{_pct(r['r1'])} <span class="tag {method_cls}">{method_lbl}</span></td>
+  <td class="num opt">{_pct(r['r2'])}</td>
+  <td class="num opt">{_pct(r['w_analyst'], 0, False)} / {_pct(r['w_tech'], 0, False)}</td>
+  <td class="num opt">{_num(r['price'])}</td>
+  <td class="num opt">{_num(r['stop'])}</td>
+  <td class="num opt">{_pct(r['fv_gap'], 0)}</td>
+  <td class="num opt">{_num(r['quality'], 0)}</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul>{reasons}</ul>
+      <h4>Technik</h4><p>Kurs {_num(r['price'])} {_e(r['currency'] or '')} · Stopp {_num(r['stop'])} · Qualität {_num(r['quality'], 0)}<br>{_e(r['tech_state'])} · Stichprobe {int(r['tech_n']):,} Fälle<br>
+      RSI {_num(r['rsi'], 0)} · %B {_num(r['pct_b'], 2)} · GD 50 {_num(r['sma50'])} · GD 200 {_num(r['sma200'])} ·
+      Trend {trend} · rel. Momentum 3M {_pct(r['rel_mom'])}</p></div>
+    <div><h4>Analysten ({_e(r['analyst_method'])})</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody>{detail}</tbody></table>
+      <p>Messfehler: r₁ {_pct(r['r1'])} ± {_pct(r['sd1'], 1, False)} · r₂ {_pct(r['r2'])} ± {_pct(r['sd2'], 1, False)}<br>
+      Fusion: r̂ {_pct(r['x'])} ± {_pct(r['sd'], 1, False)} · inkl. Kursrauschen ± {_pct(r['sd_total'], 1, False)}</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value {_num(r['fair_value'])} {_e(r['currency'] or '')} ({_pct(r['fv_gap'], 0)} zum Kurs)<br>
+      Gewinnwachstum 12M {_pct(r['growth_12m'])} · Revision 30T {_pct(r['revision_30d'])} · 90T {_pct(r['revision_90d'])}</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>"""
+
+
+def render(run: dict, path: str | None = None) -> str:
+    res: pd.DataFrame = run["results"]
+    calib, cfg, asof, track = run["calib"], run["cfg"], run["asof"], run.get("track", {"n": 0})
+    cand = res[res["signal"] != "Ausstieg"].copy()
+    cand["prio"] = (cand["signal"] != "Einstieg").astype(int)
+    top = cand.sort_values(["prio", "cr"], ascending=[True, False]).head(cfg["signals"]["top_n"]).copy()
+    top["rank"] = range(1, len(top) + 1)
+    exits = res[res["signal"] == "Ausstieg"]
+    n_in, n_out = int((res["signal"] == "Einstieg").sum()), len(exits)
+    bt = calib.get("backtest", {})
+    synth = calib.get("provider") == "synthetic"
+    ca = calib["analysts"]
+    firms = sorted(ca["firms"].items(), key=lambda kv: kv[1]["var"])[:12]
+    n_mv = int((res["analyst_method"] == "Minimum-Varianz").sum())
+    noise = calib["noise"]
+
+    exit_rows = "".join(
+        f"<tr><td class='title'><span class='nm'>{_e(r['name'])}</span><span class='tk'>{_e(r['ticker'])} · {_e(r['region'])}</span></td>"
+        f"<td>{_e('; '.join(r['reasons']))}</td><td class='num'>{_num(r['price'])}</td>"
+        f"<td class='num'>{r['cr']:+.2f}</td></tr>" for _, r in exits.iterrows()) or \
+        "<tr><td colspan='4' class='muted'>Keine Ausstiegssignale in der Watchlist.</td></tr>"
+
+    firm_rows = "".join(
+        f"<tr><td>{_e(f)}</td><td class='num'>{v['n']}</td><td class='num'>± {_pct(v['var'] ** 0.5, 1, False)}</td>"
+        f"<td class='num'>{_pct(v['bias'])}</td></tr>" for f, v in firms) or \
+        "<tr><td colspan='4' class='muted'>Keine Häuser-Historie verfügbar – überall Konsens-Rückfall.</td></tr>"
+
+    if track.get("n", 0) > 0:
+        track_txt = (f"{track['n']} abgeschlossene Einstiegssignale: Ø Rendite nach 8 Wochen {_pct(track['mean'])}, "
+                     f"Trefferquote {_pct(track['hit'], 0, False)}, Ø Prognose {_pct(track['mean_pred'])}. "
+                     f"{track.get('pending', 0)} noch offen.")
+    else:
+        track_txt = (f"Noch keine abgeschlossenen Signale (Auswertung jeweils 8 Wochen nach Signal). "
+                     f"{track.get('pending', 0)} offen.")
+
+    bt_txt = "Noch kein Rückblick-Test verfügbar."
+    if bt.get("corr_pred_real") is not None:
+        bt_txt = (f"Testzeitraum {bt['period'][0]} bis {bt['period'][1]} (nicht zur Kalibrierung verwendet), "
+                  f"{bt['n']:,} Beobachtungen. Korrelation Prognose/Ergebnis {bt['corr_pred_real']:+.3f}. "
+                  f"Beste 20 % der Signalzustände: Ø 8-Wochen-Rendite {_pct(bt['mean_top'])} "
+                  f"(Trefferquote {_pct(bt['hit_top'], 0, False)}) gegenüber {_pct(bt['mean_all'])} "
+                  f"({_pct(bt['hit_all'], 0, False)}) im Durchschnitt.")
+
+    stamp = f"{WEEKDAY[asof.weekday()]}, {asof.strftime('%d.%m.%Y')}"
+    rows = "".join(_row(r) for _, r in top.iterrows())
+    banner = ('<div class="warn">Testlauf mit synthetischen Daten – keine echten Kurse.</div>' if synth else "")
+
+    page = f"""<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>MarketLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {{
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10); --series:#2a78d6;
+  --good:#0ca30c; --goodtext:#006300; --crit:#d03b3b; --warnbg:#fff4dc;
+}}
+@media (prefers-color-scheme: dark) {{ :root:not([data-theme="light"]) {{
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10); --series:#3987e5;
+  --goodtext:#0ca30c; --warnbg:#3a2e10; }} }}
+:root[data-theme="dark"] {{
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10); --series:#3987e5;
+  --goodtext:#0ca30c; --warnbg:#3a2e10; }}
+* {{ box-sizing:border-box; }}
+body {{ margin:0; background:var(--page); color:var(--ink); font:14px/1.5 Inter, system-ui, sans-serif; }}
+.wrap {{ max-width:1320px; margin:0 auto; padding:32px 16px 64px; }}
+header h1 {{ font:600 30px/1.1 "Source Serif 4", Georgia, serif; margin:0 0 4px; letter-spacing:-.01em; }}
+header .sub {{ color:var(--ink2); margin:0; }}
+.kpis {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:24px 0 32px; }}
+.kpi {{ background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:14px 16px; }}
+.kpi .v {{ font:600 26px/1.1 "Source Serif 4", Georgia, serif; }}
+.kpi .l {{ color:var(--ink2); font-size:12.5px; margin-top:2px; }}
+h2 {{ font:600 20px/1.2 "Source Serif 4", Georgia, serif; margin:36px 0 6px; }}
+h2 + p {{ color:var(--ink2); margin:0 0 12px; max-width:860px; }}
+.card {{ background:var(--surface); border:1px solid var(--ring); border-radius:10px; overflow-x:auto; }}
+table {{ border-collapse:collapse; width:100%; }}
+th {{ text-align:left; font-weight:500; color:var(--muted); font-size:12px; padding:10px 10px; border-bottom:1px solid var(--axis); white-space:nowrap; }}
+td {{ padding:9px 10px; border-bottom:1px solid var(--grid); vertical-align:middle; }}
+.num {{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }}
+.strong {{ font-weight:600; }}
+.rank {{ color:var(--muted); }}
+.title .nm {{ display:block; font-weight:500; }}
+.title .tk {{ display:block; color:var(--muted); font-size:12px; }}
+tr.main td {{ border-bottom:none; }}
+tr.det td {{ padding-top:0; }}
+details summary {{ cursor:pointer; color:var(--ink2); font-size:12.5px; padding:2px 0 6px; }}
+.detgrid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; padding:6px 0 12px; }}
+.detgrid h4 {{ margin:6px 0 4px; font-size:12.5px; color:var(--ink2); font-weight:600; }}
+.detgrid p, .detgrid ul {{ margin:0 0 8px; color:var(--ink); font-size:13px; }}
+.detgrid ul {{ padding-left:18px; }}
+.mini th, .mini td {{ padding:4px 6px; font-size:12.5px; }}
+.muted {{ color:var(--muted); }}
+.badge {{ display:inline-flex; align-items:center; gap:6px; font-weight:500; font-size:13px; white-space:nowrap; }}
+.badge svg {{ width:10px; height:10px; }}
+.badge.good {{ color:var(--goodtext); }} .badge.good svg {{ fill:var(--good); }}
+.badge.crit {{ color:var(--crit); }} .badge.crit svg {{ fill:var(--crit); }}
+.badge.hold {{ color:var(--ink2); }} .badge.hold svg {{ fill:var(--muted); }}
+.tag {{ font-size:10.5px; padding:1px 5px; border-radius:4px; border:1px solid var(--ring); color:var(--ink2); margin-left:4px; }}
+.tag.mv {{ border-color:var(--series); color:var(--series); }}
+.crval {{ display:inline-block; min-width:44px; }}
+.crbar {{ position:relative; display:inline-block; width:70px; height:8px; vertical-align:middle; margin-left:6px; background:var(--grid); border-radius:4px; }}
+.crbar .mid {{ position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--axis); }}
+.crbar .fill {{ position:absolute; top:0; bottom:0; background:var(--series); border-radius:4px; }}
+.two {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; }}
+.two .card {{ padding:4px 0; }}
+.prose {{ padding:14px 16px; color:var(--ink); }}
+.warn {{ background:var(--warnbg); border-radius:8px; padding:10px 14px; margin:16px 0 0; font-weight:500; }}
+@media (max-width:760px) {{ .opt {{ display:none; }} .crbar {{ width:40px; }} td, th {{ padding-left:6px; padding-right:6px; }} .detgrid {{ grid-template-columns:1fr; }} .wrap {{ padding-top:20px; }} }}
+footer {{ margin-top:40px; color:var(--muted); font-size:12px; max-width:860px; }}
+</style></head><body><div class="wrap">
+<header>
+  <h1>MarketLab</h1>
+  <p class="sub">Qualitätsaktien Europa · USA · Asien — Stand {stamp} · Horizont 8 Wochen</p>
+  {banner}
+</header>
+
+<section class="kpis">
+  <div class="kpi"><div class="v">{len(res)}</div><div class="l">Titel in der Watchlist</div></div>
+  <div class="kpi"><div class="v">{n_in}</div><div class="l">Einstiegssignale</div></div>
+  <div class="kpi"><div class="v">{n_out}</div><div class="l">Ausstiegssignale</div></div>
+  <div class="kpi"><div class="v">{n_mv}</div><div class="l">Titel mit Minimum-Varianz-Analystenziel</div></div>
+  <div class="kpi"><div class="v">{_pct(noise['sigma_eps2'] ** 0.5, 1, False)}</div><div class="l">Kursrauschen σε (8 Wochen, {'geschätzt' if noise['identified'] else 'Annahme'})</div></div>
+</section>
+
+<h2>Top {len(top)} nach Chance/Risiko</h2>
+<p>Rangkriterium ist r̂/σ: die Kalman-fusionierte erwartete 8-Wochen-Rendite je Schätzfehler. Einstiegssignale stehen vorn, danach die übrigen Titel nach Chance/Risiko. Titel mit aktivem Ausstiegssignal stehen in der Liste darunter.
+r₁ = Analystenquelle (MV = Minimum-Varianz der Top-5-Häuser, Konsens = Rückfall), r₂ = Chartquelle.
+Gewichte zeigen den Anteil Analyst / Technik an der heutigen Fusion.</p>
+<div class="card"><table>
+<thead><tr><th class="num opt">#</th><th>Titel</th><th>Signal</th><th class="num">Chance/Risiko</th>
+<th class="num">r̂ (Kalman)</th><th class="num opt">Schätzfehler σ</th><th class="num opt">r₁ Analysten</th><th class="num opt">r₂ Technik</th>
+<th class="num opt">Gewicht A / T</th><th class="num opt">Kurs</th><th class="num opt">Stopp</th><th class="num opt">Fair Value</th>
+<th class="num opt">Qualität</th></tr></thead>
+<tbody>{rows}</tbody></table></div>
+
+<h2>Ausstiegssignale in der Watchlist</h2>
+<p>Alle Titel der Watchlist, bei denen eine Ausstiegsregel greift.</p>
+<div class="card"><table>
+<thead><tr><th>Titel</th><th>Grund</th><th class="num">Kurs</th><th class="num">Chance/Risiko</th></tr></thead>
+<tbody>{exit_rows}</tbody></table></div>
+
+<h2>Güte und Kalibrierung</h2>
+<p>Kalibrierung vom {_e(str(calib['created'])[:10])} · Universum {calib['universe_size']} Titel,
+nach Größenfilter {calib['size_filter']}.</p>
+<div class="two">
+  <div class="card prose"><h4 style="margin:0 0 6px">Rückblick-Test Technik</h4>{bt_txt}
+    <h4 style="margin:14px 0 6px">Erfolgskontrolle des Agenten</h4>{track_txt}</div>
+  <div class="card"><table>
+    <thead><tr><th>Analystenhaus (geringste Fehlervarianz)</th><th class="num">Prognosen</th>
+    <th class="num">σ (8 Wo.)</th><th class="num">Verzerrung</th></tr></thead>
+    <tbody>{firm_rows}</tbody></table>
+    <p class="muted" style="padding:8px 10px 6px;margin:0">Fehlerkorrelation zwischen Häusern ρ_ff = {ca['rho_ff']:.2f};
+    Gewichte als long-only Minimum-Varianz-Portfolio über die Fehler-Kovarianzmatrix.
+    σ und Korrelation beziehen sich auf das Messrauschen nach Abzug des gemeinsamen Kursrauschens.
+    Restkorrelation Analyst/Technik ρ_v = {noise['rho_v']:.2f} (Annahme, mit zwei Quellen nicht schätzbar).</p></div>
+</div>
+
+<footer>Automatisch erzeugt aus öffentlichen Marktdaten (Yahoo Finance). Ausstiegsregeln: Chance/Risiko unter
+{cfg['signals']['exit_cr']:+.2f}, Schlusskurs {cfg['signals']['gd200_break_days']} Tage unter GD 200 oder GD 50 kreuzt GD 200 nach unten.
+Stopp = Kurs − {_num(cfg['signals']['stop_monthly_std'], 1)} Monats-Standardabweichungen.</footer>
+</div></body></html>"""
+    path = path or os.path.join(ROOT, "docs", "index.html")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(page)
+    return path

@@ -1,0 +1,106 @@
+# MarketLab – zentrale Einstellungen
+# Alle Schwellen sind Startwerte und werden am Ergebnis justiert.
+
+horizon_days: 40            # Anlagehorizont: 8 Wochen = 40 Handelstage
+history_years: 5            # Kurshistorie für Kalibrierung / Rückblick-Test
+
+universe:
+  min_market_cap_usd: 10000000000
+  watchlist_size: 120
+  min_quality_score: 50
+
+# Qualitätskennzahlen: Wert bei Score 0 (bad) und Score 100 (good), linear dazwischen.
+# Fehlende Werte werden neutral mit 50 bewertet.
+quality:
+  roe:               {bad: 0.00, good: 0.30}
+  operating_margin:  {bad: 0.00, good: 0.30}
+  fcf_margin:        {bad: 0.00, good: 0.20}
+  revenue_growth:    {bad: 0.00, good: 0.10}
+  net_debt_ebitda:   {bad: 5.0,  good: 0.0}
+  earnings_stability: {bad: 0.50, good: 0.0}   # Variationskoeffizient der EPS-Residuen um den Trend
+
+technical:
+  rsi_period: 14
+  bb_period: 20
+  bb_std: 2.0
+  sma_fast: 50
+  sma_slow: 200
+  momentum_days: 63          # 3 Monate
+  min_bucket_obs: 200        # darunter Schrumpfung Richtung Trend-Bucket
+  sample_every: 5            # Kalibrierung: jede 5. Beobachtung (weniger Überlappung)
+
+analysts:
+  target_lookback_days: 180  # aktuelles Kursziel eines Hauses: nicht älter als 180 Tage
+  min_firm_obs: 8            # min. Anzahl ausgewerteter Kursziele je Haus
+  top_n: 5
+  horizon_mismatch_penalty: 1.5   # Varianzaufschlag für 12M-Ziel -> 8-Wochen-Horizont
+  fallback_min_rel_std: 0.10      # Mindest-Unsicherheit des Konsensziels (relativ, 12M)
+
+# Rauschmodell: realisierte Rendite = wahre erwartete Rendite + gemeinsames Kursrauschen ε.
+# Nur die Messfehler (nicht ε) gehen in die Kalman-Fusion ein.
+noise:
+  rho_v: 0.20                # Annahme: Restkorrelation der Messfehler Analyst/Technik (nicht identifizierbar)
+  floor_share: 0.10          # Messrauschen mind. 10 % der Rohfehlervarianz
+  default_eps_share: 0.85    # falls nicht schätzbar: σε² = 85 % der Technik-Gesamtvarianz
+
+kalman:
+  process_std: 0.005         # tägliche Drift der wahren erwarteten Rendite
+  measurement_inflation: 40  # Messungen sind von Tag zu Tag stark autokorreliert
+  init_std: 0.10
+
+signals:
+  entry_cr: 1.0              # Einstieg: r̂ mindestens 1 Schätzfehler über null
+  entry_min_return: 0.01     # und r̂ mindestens 1 %
+  exit_cr: -1.0              # Ausstieg: r̂ mindestens 1 Schätzfehler unter null
+  gd200_break_days: 2
+  stop_monthly_std: 1.1      # Veto-Gate: Stopp ≥ 1,1 Monats-Standardabweichungen
+  top_n: 10
+
+# Regionalindizes für relative Stärke (Suffix -> Index)
+region_index:
+  "": "^GSPC"
+  ".DE": "^GDAXI"
+  ".PA": "^FCHI"
+  ".L": "^FTSE"
+  ".SW": "^SSMI"
+  ".AS": "^AEX"
+  ".MC": "^IBEX"
+  ".MI": "FTSEMIB.MI"
+  ".ST": "^OMX"
+  ".CO": "^OMXC25"
+  ".T": "^N225"
+  ".HK": "^HSI"
+  ".TW": "^TWII"
+  ".NS": "^NSEI"
+
+# Indexlisten von Wikipedia; Ausfälle werden über data/universe_seed.csv abgefangen
+index_sources:
+  - name: S&P 500
+    url: https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
+    columns: [Symbol]
+    suffix: ""
+    dot_to_dash: true
+  - name: DAX
+    url: https://en.wikipedia.org/wiki/DAX
+    columns: [Ticker]
+    suffix: ".DE"
+  - name: CAC 40
+    url: https://en.wikipedia.org/wiki/CAC_40
+    columns: [Ticker]
+    suffix: ".PA"
+  - name: FTSE 100
+    url: https://en.wikipedia.org/wiki/FTSE_100_Index
+    columns: [Ticker, EPIC]
+    suffix: ".L"
+  - name: SMI
+    url: https://en.wikipedia.org/wiki/Swiss_Market_Index
+    columns: [Ticker]
+    suffix: ".SW"
+  - name: AEX
+    url: https://en.wikipedia.org/wiki/AEX_index
+    columns: [Ticker symbol, Ticker]
+    suffix: ".AS"
+  - name: Nifty 50
+    url: https://en.wikipedia.org/wiki/NIFTY_50
+    columns: [Symbol]
+    suffix: ".NS"
