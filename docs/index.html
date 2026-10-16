@@ -1,2 +1,459 @@
-<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>MarketLab</title></head>
-<body style="font-family:system-ui;padding:32px;background:#f9f9f7"><h1>MarketLab</h1><p>Erstlauf ausstehend – das Dashboard erscheint nach dem ersten Lauf.</p></body></html>
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>MarketLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10); --series:#2a78d6;
+  --good:#0ca30c; --goodtext:#006300; --crit:#d03b3b; --warnbg:#fff4dc;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10); --series:#3987e5;
+  --goodtext:#0ca30c; --warnbg:#3a2e10; } }
+:root[data-theme="dark"] {
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10); --series:#3987e5;
+  --goodtext:#0ca30c; --warnbg:#3a2e10; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--page); color:var(--ink); font:14px/1.5 Inter, system-ui, sans-serif; }
+.wrap { max-width:1320px; margin:0 auto; padding:32px 16px 64px; }
+header h1 { font:600 30px/1.1 "Source Serif 4", Georgia, serif; margin:0 0 4px; letter-spacing:-.01em; }
+header .sub { color:var(--ink2); margin:0; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:24px 0 32px; }
+.kpi { background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:14px 16px; }
+.kpi .v { font:600 26px/1.1 "Source Serif 4", Georgia, serif; }
+.kpi .l { color:var(--ink2); font-size:12.5px; margin-top:2px; }
+h2 { font:600 20px/1.2 "Source Serif 4", Georgia, serif; margin:36px 0 6px; }
+h2 + p { color:var(--ink2); margin:0 0 12px; max-width:860px; }
+.card { background:var(--surface); border:1px solid var(--ring); border-radius:10px; overflow-x:auto; }
+table { border-collapse:collapse; width:100%; }
+th { text-align:left; font-weight:500; color:var(--muted); font-size:12px; padding:10px 10px; border-bottom:1px solid var(--axis); white-space:nowrap; }
+td { padding:9px 10px; border-bottom:1px solid var(--grid); vertical-align:middle; }
+.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.strong { font-weight:600; }
+.rank { color:var(--muted); }
+.title .nm { display:block; font-weight:500; }
+.title .tk { display:block; color:var(--muted); font-size:12px; }
+tr.main td { border-bottom:none; }
+tr.det td { padding-top:0; }
+details summary { cursor:pointer; color:var(--ink2); font-size:12.5px; padding:2px 0 6px; }
+.detgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; padding:6px 0 12px; }
+.detgrid h4 { margin:6px 0 4px; font-size:12.5px; color:var(--ink2); font-weight:600; }
+.detgrid p, .detgrid ul { margin:0 0 8px; color:var(--ink); font-size:13px; }
+.detgrid ul { padding-left:18px; }
+.mini th, .mini td { padding:4px 6px; font-size:12.5px; }
+.muted { color:var(--muted); }
+.badge { display:inline-flex; align-items:center; gap:6px; font-weight:500; font-size:13px; white-space:nowrap; }
+.badge svg { width:10px; height:10px; }
+.badge.good { color:var(--goodtext); } .badge.good svg { fill:var(--good); }
+.badge.crit { color:var(--crit); } .badge.crit svg { fill:var(--crit); }
+.badge.hold { color:var(--ink2); } .badge.hold svg { fill:var(--muted); }
+.tag { font-size:10.5px; padding:1px 5px; border-radius:4px; border:1px solid var(--ring); color:var(--ink2); margin-left:4px; }
+.tag.mv { border-color:var(--series); color:var(--series); }
+.crval { display:inline-block; min-width:44px; }
+.crbar { position:relative; display:inline-block; width:70px; height:8px; vertical-align:middle; margin-left:6px; background:var(--grid); border-radius:4px; }
+.crbar .mid { position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--axis); }
+.crbar .fill { position:absolute; top:0; bottom:0; background:var(--series); border-radius:4px; }
+.two { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; }
+.two .card { padding:4px 0; }
+.prose { padding:14px 16px; color:var(--ink); }
+.warn { background:var(--warnbg); border-radius:8px; padding:10px 14px; margin:16px 0 0; font-weight:500; }
+@media (max-width:760px) { .opt { display:none; } .crbar { width:40px; } td, th { padding-left:6px; padding-right:6px; } .detgrid { grid-template-columns:1fr; } .wrap { padding-top:20px; } }
+footer { margin-top:40px; color:var(--muted); font-size:12px; max-width:860px; }
+</style></head><body><div class="wrap">
+<header>
+  <h1>MarketLab</h1>
+  <p class="sub">Qualitätsaktien Europa · USA · Asien — Stand Freitag, 16.10.2026 · Horizont 8 Wochen</p>
+  
+</header>
+
+<section class="kpis">
+  <div class="kpi"><div class="v">120</div><div class="l">Titel in der Watchlist</div></div>
+  <div class="kpi"><div class="v">6</div><div class="l">Einstiegssignale</div></div>
+  <div class="kpi"><div class="v">16</div><div class="l">Ausstiegssignale</div></div>
+  <div class="kpi"><div class="v">74</div><div class="l">Titel mit Minimum-Varianz-Analystenziel</div></div>
+  <div class="kpi"><div class="v">13,0 %</div><div class="l">Kursrauschen σε (8 Wochen, geschätzt)</div></div>
+</section>
+
+<h2>Top 10 nach Chance/Risiko</h2>
+<p>Rangkriterium ist r̂/σ: die Kalman-fusionierte erwartete 8-Wochen-Rendite je Schätzfehler. Einstiegssignale stehen vorn, danach die übrigen Titel nach Chance/Risiko. Titel mit aktivem Ausstiegssignal stehen in der Liste darunter.
+r₁ = Analystenquelle (MV = Minimum-Varianz der Top-5-Häuser, Konsens = Rückfall), r₂ = Chartquelle.
+Gewichte zeigen den Anteil Analyst / Technik an der heutigen Fusion.</p>
+<div class="card"><table>
+<thead><tr><th class="num opt">#</th><th>Titel</th><th>Signal</th><th class="num">Chance/Risiko</th>
+<th class="num">r̂ (Kalman)</th><th class="num opt">Schätzfehler σ</th><th class="num opt">r₁ Analysten</th><th class="num opt">r₂ Technik</th>
+<th class="num opt">Gewicht A / T</th><th class="num opt">Kurs</th><th class="num opt">Stopp</th><th class="num opt">Fair Value</th>
+<th class="num opt">Qualität</th></tr></thead>
+<tbody>
+<tr class="main">
+  <td class="num rank opt">1</td>
+  <td class="title"><span class="nm">Monster Beverage Corporation</span><span class="tk">MNST · USA</span></td>
+  <td><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></td>
+  <td class="num"><span class="crval">+3.39</span><span class="crbar" title="Chance/Risiko +3.39"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+7,9 %</td>
+  <td class="num opt">± 2,3 %</td>
+  <td class="num opt">+10,2 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+2,5 %</td>
+  <td class="num opt">70 % / 30 %</td>
+  <td class="num opt">45,56</td>
+  <td class="num opt">41,79</td>
+  <td class="num opt">-11 %</td>
+  <td class="num opt">93</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko +3.39 über +1.00, erwartete Rendite +7.9%, Aufwärtstrend intakt</li></ul>
+      <h4>Technik</h4><p>Kurs 45,56 USD · Stopp 41,79 · Qualität 93<br>Trend auf, RSI 50–70, Bollinger oben, rel. Momentum negativ · Stichprobe 5,088 Fälle<br>
+      RSI 62 · %B 1,01 · GD 50 44,70 · GD 200 42,83 ·
+      Trend auf · rel. Momentum 3M -5,3 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>BMO Capital</td><td class='num'>95,00</td><td class='num'>27 %</td></tr><tr><td>Rothschild &amp; Co</td><td class='num'>90,00</td><td class='num'>23 %</td></tr><tr><td>RBC Capital</td><td class='num'>100,00</td><td class='num'>18 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>105,00</td><td class='num'>17 %</td></tr><tr><td>UBS</td><td class='num'>105,00</td><td class='num'>15 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +10,2 % ± 2,6 % · r₂ +2,5 % ± 3,6 %<br>
+      Fusion: r̂ +7,9 % ± 2,3 % · inkl. Kursrauschen ± 13,2 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 40,53 USD (-11 % zum Kurs)<br>
+      Gewinnwachstum 12M +16,1 % · Revision 30T -0,1 % · 90T +2,1 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>
+<tr class="main">
+  <td class="num rank opt">2</td>
+  <td class="title"><span class="nm">NVIDIA Corporation</span><span class="tk">NVDA · USA</span></td>
+  <td><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></td>
+  <td class="num"><span class="crval">+2.57</span><span class="crbar" title="Chance/Risiko +2.57"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+6,4 %</td>
+  <td class="num opt">± 2,5 %</td>
+  <td class="num opt">+6,6 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+3,7 %</td>
+  <td class="num opt">94 % / 6 %</td>
+  <td class="num opt">214,15</td>
+  <td class="num opt">189,26</td>
+  <td class="num opt">+37 %</td>
+  <td class="num opt">91</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko +2.57 über +1.00, erwartete Rendite +6.4%, Aufwärtstrend intakt</li></ul>
+      <h4>Technik</h4><p>Kurs 214,15 USD · Stopp 189,26 · Qualität 91<br>Trend auf, RSI 35–50, Bollinger unten, rel. Momentum positiv · Stichprobe 4,809 Fälle<br>
+      RSI 37 · %B -0,05 · GD 50 223,09 · GD 200 203,10 ·
+      Trend auf · rel. Momentum 3M +1,6 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>Raymond James</td><td class='num'>515,00</td><td class='num'>24 %</td></tr><tr><td>BMO Capital</td><td class='num'>340,00</td><td class='num'>23 %</td></tr><tr><td>Tigress Financial</td><td class='num'>425,00</td><td class='num'>20 %</td></tr><tr><td>Baird</td><td class='num'>500,00</td><td class='num'>17 %</td></tr><tr><td>TD Cowen</td><td class='num'>275,00</td><td class='num'>16 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +6,6 % ± 2,5 % · r₂ +3,7 % ± 6,9 %<br>
+      Fusion: r̂ +6,4 % ± 2,5 % · inkl. Kursrauschen ± 13,2 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 292,71 USD (+37 % zum Kurs)<br>
+      Gewinnwachstum 12M +83,1 % · Revision 30T +2,2 % · 90T +24,7 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>
+<tr class="main">
+  <td class="num rank opt">3</td>
+  <td class="title"><span class="nm">Sandisk Corporation</span><span class="tk">SNDK · USA</span></td>
+  <td><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></td>
+  <td class="num"><span class="crval">+1.50</span><span class="crbar" title="Chance/Risiko +1.50"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+3,8 %</td>
+  <td class="num opt">± 2,6 %</td>
+  <td class="num opt">+4,4 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+2,6 %</td>
+  <td class="num opt">68 % / 32 %</td>
+  <td class="num opt">1.317,28</td>
+  <td class="num opt">853,70</td>
+  <td class="num opt">–</td>
+  <td class="num opt">83</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko +1.50 über +1.00, erwartete Rendite +3.8%, Aufwärtstrend intakt</li></ul>
+      <h4>Technik</h4><p>Kurs 1.317,28 USD · Stopp 853,70 · Qualität 83<br>Trend auf, RSI &lt;35, Bollinger unten, rel. Momentum negativ · Stichprobe 1,385 Fälle<br>
+      RSI 30 · %B -0,03 · GD 50 1.603,97 · GD 200 1.244,24 ·
+      Trend auf · rel. Momentum 3M -18,9 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>RBC Capital</td><td class='num'>1.600,00</td><td class='num'>28 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>2.800,00</td><td class='num'>27 %</td></tr><tr><td>Wells Fargo</td><td class='num'>1.550,00</td><td class='num'>24 %</td></tr><tr><td>Barclays</td><td class='num'>2.300,00</td><td class='num'>19 %</td></tr><tr><td>Morgan Stanley</td><td class='num'>1.750,00</td><td class='num'>2 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +4,4 % ± 2,9 % · r₂ +2,6 % ± 4,0 %<br>
+      Fusion: r̂ +3,8 % ± 2,6 % · inkl. Kursrauschen ± 13,3 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value – USD (– zum Kurs)<br>
+      Gewinnwachstum 12M +113,5 % · Revision 30T +0,6 % · 90T +7,2 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>
+<tr class="main">
+  <td class="num rank opt">4</td>
+  <td class="title"><span class="nm">Amphenol Corporation</span><span class="tk">APH · USA</span></td>
+  <td><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></td>
+  <td class="num"><span class="crval">+1.38</span><span class="crbar" title="Chance/Risiko +1.38"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+3,3 %</td>
+  <td class="num opt">± 2,4 %</td>
+  <td class="num opt">+3,5 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+2,7 %</td>
+  <td class="num opt">72 % / 28 %</td>
+  <td class="num opt">79,68</td>
+  <td class="num opt">68,28</td>
+  <td class="num opt">+13 %</td>
+  <td class="num opt">83</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko +1.38 über +1.00, erwartete Rendite +3.3%, Aufwärtstrend intakt</li></ul>
+      <h4>Technik</h4><p>Kurs 79,68 USD · Stopp 68,28 · Qualität 83<br>Trend auf, RSI 35–50, Bollinger unten, rel. Momentum negativ · Stichprobe 3,662 Fälle<br>
+      RSI 40 · %B 0,01 · GD 50 82,13 · GD 200 75,06 ·
+      Trend auf · rel. Momentum 3M -0,7 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>BNP Paribas</td><td class='num'>110,00</td><td class='num'>26 %</td></tr><tr><td>TD Cowen</td><td class='num'>90,00</td><td class='num'>20 %</td></tr><tr><td>Truist Securities</td><td class='num'>215,00</td><td class='num'>20 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>100,00</td><td class='num'>18 %</td></tr><tr><td>UBS</td><td class='num'>105,00</td><td class='num'>16 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +3,5 % ± 2,7 % · r₂ +2,7 % ± 3,9 %<br>
+      Fusion: r̂ +3,3 % ± 2,4 % · inkl. Kursrauschen ± 13,2 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 90,38 USD (+13 % zum Kurs)<br>
+      Gewinnwachstum 12M +42,5 % · Revision 30T +1,8 % · 90T +14,2 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>
+<tr class="main">
+  <td class="num rank opt">5</td>
+  <td class="title"><span class="nm">Newmont Corporation</span><span class="tk">NEM · USA</span></td>
+  <td><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></td>
+  <td class="num"><span class="crval">+1.21</span><span class="crbar" title="Chance/Risiko +1.21"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+2,6 %</td>
+  <td class="num opt">± 2,1 %</td>
+  <td class="num opt">+2,6 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+3,4 %</td>
+  <td class="num opt">98 % / 2 %</td>
+  <td class="num opt">117,46</td>
+  <td class="num opt">99,88</td>
+  <td class="num opt">-8 %</td>
+  <td class="num opt">81</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko +1.21 über +1.00, erwartete Rendite +2.6%, Aufwärtstrend intakt</li></ul>
+      <h4>Technik</h4><p>Kurs 117,46 USD · Stopp 99,88 · Qualität 81<br>Trend auf, RSI 35–50, Bollinger Mitte, rel. Momentum positiv · Stichprobe 7,097 Fälle<br>
+      RSI 49 · %B 0,49 · GD 50 121,94 · GD 200 112,08 ·
+      Trend auf · rel. Momentum 3M +25,5 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>Scotiabank</td><td class='num'>149,00</td><td class='num'>40 %</td></tr><tr><td>CIBC</td><td class='num'>176,00</td><td class='num'>32 %</td></tr><tr><td>BMO Capital</td><td class='num'>145,00</td><td class='num'>13 %</td></tr><tr><td>TD Cowen</td><td class='num'>127,00</td><td class='num'>8 %</td></tr><tr><td>RBC Capital</td><td class='num'>155,00</td><td class='num'>7 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +2,6 % ± 2,2 % · r₂ +3,4 % ± 7,9 %<br>
+      Fusion: r̂ +2,6 % ± 2,1 % · inkl. Kursrauschen ± 13,2 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 108,19 USD (-8 % zum Kurs)<br>
+      Gewinnwachstum 12M +21,0 % · Revision 30T -0,8 % · 90T -7,1 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>
+<tr class="main">
+  <td class="num rank opt">6</td>
+  <td class="title"><span class="nm">Micron Technology, Inc.</span><span class="tk">MU · USA</span></td>
+  <td><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></td>
+  <td class="num"><span class="crval">+1.15</span><span class="crbar" title="Chance/Risiko +1.15"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+2,7 %</td>
+  <td class="num opt">± 2,3 %</td>
+  <td class="num opt">+2,7 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+2,6 %</td>
+  <td class="num opt">75 % / 25 %</td>
+  <td class="num opt">888,99</td>
+  <td class="num opt">661,36</td>
+  <td class="num opt">-80 %</td>
+  <td class="num opt">78</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko +1.15 über +1.00, erwartete Rendite +2.7%, Aufwärtstrend intakt</li></ul>
+      <h4>Technik</h4><p>Kurs 888,99 USD · Stopp 661,36 · Qualität 78<br>Trend auf, RSI &lt;35, Bollinger unten, rel. Momentum negativ · Stichprobe 1,385 Fälle<br>
+      RSI 35 · %B -0,07 · GD 50 985,95 · GD 200 731,42 ·
+      Trend auf · rel. Momentum 3M -10,2 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>Melius Research</td><td class='num'>1.100,00</td><td class='num'>25 %</td></tr><tr><td>Raymond James</td><td class='num'>1.500,00</td><td class='num'>24 %</td></tr><tr><td>Baird</td><td class='num'>1.520,00</td><td class='num'>18 %</td></tr><tr><td>TD Cowen</td><td class='num'>1.600,00</td><td class='num'>16 %</td></tr><tr><td>Wolfe Research</td><td class='num'>1.250,00</td><td class='num'>16 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +2,7 % ± 2,5 % · r₂ +2,6 % ± 4,0 %<br>
+      Fusion: r̂ +2,7 % ± 2,3 % · inkl. Kursrauschen ± 13,2 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 178,20 USD (-80 % zum Kurs)<br>
+      Gewinnwachstum 12M +74,8 % · Revision 30T +18,5 % · 90T +25,2 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>
+<tr class="main">
+  <td class="num rank opt">7</td>
+  <td class="title"><span class="nm">Applovin Corporation</span><span class="tk">APP · USA</span></td>
+  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
+  <td class="num"><span class="crval">+2.78</span><span class="crbar" title="Chance/Risiko +2.78"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+6,9 %</td>
+  <td class="num opt">± 2,5 %</td>
+  <td class="num opt">+7,5 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+3,7 %</td>
+  <td class="num opt">82 % / 18 %</td>
+  <td class="num opt">266,47</td>
+  <td class="num opt">206,18</td>
+  <td class="num opt">+270 %</td>
+  <td class="num opt">83</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko gut, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
+      <h4>Technik</h4><p>Kurs 266,47 USD · Stopp 206,18 · Qualität 83<br>Trend ab, RSI 35–50, Bollinger Mitte, rel. Momentum negativ · Stichprobe 13,505 Fälle<br>
+      RSI 37 · %B 0,22 · GD 50 305,17 · GD 200 428,26 ·
+      Trend ab · rel. Momentum 3M -39,6 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>Raymond James</td><td class='num'>640,00</td><td class='num'>27 %</td></tr><tr><td>BTIG</td><td class='num'>396,00</td><td class='num'>20 %</td></tr><tr><td>Oppenheimer</td><td class='num'>490,00</td><td class='num'>18 %</td></tr><tr><td>RBC Capital</td><td class='num'>575,00</td><td class='num'>18 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>510,00</td><td class='num'>17 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +7,5 % ± 2,6 % · r₂ +3,7 % ± 4,8 %<br>
+      Fusion: r̂ +6,9 % ± 2,5 % · inkl. Kursrauschen ± 13,2 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 986,26 USD (+270 % zum Kurs)<br>
+      Gewinnwachstum 12M +43,9 % · Revision 30T -0,4 % · 90T -6,0 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>
+<tr class="main">
+  <td class="num rank opt">8</td>
+  <td class="title"><span class="nm">Vertiv Holdings, LLC</span><span class="tk">VRT · USA</span></td>
+  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
+  <td class="num"><span class="crval">+1.94</span><span class="crbar" title="Chance/Risiko +1.94"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+5,1 %</td>
+  <td class="num opt">± 2,6 %</td>
+  <td class="num opt">+5,1 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+5,0 %</td>
+  <td class="num opt">98 % / 2 %</td>
+  <td class="num opt">207,46</td>
+  <td class="num opt">164,72</td>
+  <td class="num opt">+66 %</td>
+  <td class="num opt">83</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko gut, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
+      <h4>Technik</h4><p>Kurs 207,46 USD · Stopp 164,72 · Qualität 83<br>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum negativ · Stichprobe 4,563 Fälle<br>
+      RSI 27 · %B -0,17 · GD 50 255,61 · GD 200 271,87 ·
+      Trend ab · rel. Momentum 3M -33,7 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>BMO Capital</td><td class='num'>329,00</td><td class='num'>27 %</td></tr><tr><td>Baird</td><td class='num'>370,00</td><td class='num'>20 %</td></tr><tr><td>TD Cowen</td><td class='num'>387,00</td><td class='num'>18 %</td></tr><tr><td>Oppenheimer</td><td class='num'>353,00</td><td class='num'>18 %</td></tr><tr><td>RBC Capital</td><td class='num'>323,00</td><td class='num'>17 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +5,1 % ± 2,6 % · r₂ +5,0 % ± 9,2 %<br>
+      Fusion: r̂ +5,1 % ± 2,6 % · inkl. Kursrauschen ± 13,3 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 344,29 USD (+66 % zum Kurs)<br>
+      Gewinnwachstum 12M +48,4 % · Revision 30T +0,8 % · 90T +4,2 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>
+<tr class="main">
+  <td class="num rank opt">9</td>
+  <td class="title"><span class="nm">Seagate Technology Holdings PLC</span><span class="tk">STX · USA</span></td>
+  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
+  <td class="num"><span class="crval">+1.35</span><span class="crbar" title="Chance/Risiko +1.35"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+3,4 %</td>
+  <td class="num opt">± 2,5 %</td>
+  <td class="num opt">+3,1 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+4,3 %</td>
+  <td class="num opt">73 % / 27 %</td>
+  <td class="num opt">644,72</td>
+  <td class="num opt">495,23</td>
+  <td class="num opt">+46 %</td>
+  <td class="num opt">78</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko gut, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
+      <h4>Technik</h4><p>Kurs 644,72 USD · Stopp 495,23 · Qualität 78<br>Trend gemischt, RSI &lt;35, Bollinger unten, rel. Momentum negativ · Stichprobe 3,235 Fälle<br>
+      RSI 28 · %B -0,02 · GD 50 842,04 · GD 200 686,84 ·
+      Trend gemischt · rel. Momentum 3M -29,5 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>TD Cowen</td><td class='num'>1.000,00</td><td class='num'>24 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>1.000,00</td><td class='num'>22 %</td></tr><tr><td>UBS</td><td class='num'>545,00</td><td class='num'>20 %</td></tr><tr><td>Wells Fargo</td><td class='num'>865,00</td><td class='num'>19 %</td></tr><tr><td>Barclays</td><td class='num'>1.250,00</td><td class='num'>15 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +3,1 % ± 2,8 % · r₂ +4,3 % ± 4,1 %<br>
+      Fusion: r̂ +3,4 % ± 2,5 % · inkl. Kursrauschen ± 13,3 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 943,41 USD (+46 % zum Kurs)<br>
+      Gewinnwachstum 12M +94,4 % · Revision 30T +2,3 % · 90T +25,5 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr>
+<tr class="main">
+  <td class="num rank opt">10</td>
+  <td class="title"><span class="nm">Reddit, Inc.</span><span class="tk">RDDT · USA</span></td>
+  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
+  <td class="num"><span class="crval">+1.31</span><span class="crbar" title="Chance/Risiko +1.31"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
+  <td class="num strong">+3,2 %</td>
+  <td class="num opt">± 2,4 %</td>
+  <td class="num opt">+3,4 % <span class="tag mv">MV</span></td>
+  <td class="num opt">+2,5 %</td>
+  <td class="num opt">73 % / 27 %</td>
+  <td class="num opt">154,14</td>
+  <td class="num opt">120,14</td>
+  <td class="num opt">+124 %</td>
+  <td class="num opt">83</td>
+</tr>
+<tr class="det"><td colspan="13">
+  <details><summary>Begründung und Details</summary>
+  <div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Chance/Risiko gut, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
+      <h4>Technik</h4><p>Kurs 154,14 USD · Stopp 120,14 · Qualität 83<br>Trend ab, RSI 50–70, Bollinger Mitte, rel. Momentum negativ · Stichprobe 7,132 Fälle<br>
+      RSI 50 · %B 0,59 · GD 50 154,22 · GD 200 162,05 ·
+      Trend ab · rel. Momentum 3M -18,9 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>B. Riley Securities</td><td class='num'>270,00</td><td class='num'>25 %</td></tr><tr><td>Oppenheimer</td><td class='num'>200,00</td><td class='num'>20 %</td></tr><tr><td>Truist Securities</td><td class='num'>275,00</td><td class='num'>20 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>300,00</td><td class='num'>19 %</td></tr><tr><td>Wells Fargo</td><td class='num'>142,00</td><td class='num'>16 %</td></tr></tbody></table>
+      <p>Messfehler: r₁ +3,4 % ± 2,7 % · r₂ +2,5 % ± 4,0 %<br>
+      Fusion: r̂ +3,2 % ± 2,4 % · inkl. Kursrauschen ± 13,2 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 344,80 USD (+124 % zum Kurs)<br>
+      Gewinnwachstum 12M +68,8 % · Revision 30T +0,9 % · 90T +9,0 %</p>
+      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
+      (geplant als dritte und vierte Messquelle).</p></div>
+  </div></details>
+</td></tr></tbody></table></div>
+
+<h2>Ausstiegssignale in der Watchlist</h2>
+<p>Alle Titel der Watchlist, bei denen eine Ausstiegsregel greift.</p>
+<div class="card"><table>
+<thead><tr><th>Titel</th><th>Grund</th><th class="num">Kurs</th><th class="num">Chance/Risiko</th></tr></thead>
+<tbody><tr><td class='title'><span class='nm'>Western Digital Corporation</span><span class='tk'>WDC · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>337,18</td><td class='num'>+1.56</td></tr><tr><td class='title'><span class='nm'>Broadcom Inc.</span><span class='tk'>AVGO · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200; GD 50 kreuzt GD 200 nach unten</td><td class='num'>330,43</td><td class='num'>+1.41</td></tr><tr><td class='title'><span class='nm'>Comfort Systems USA, Inc.</span><span class='tk'>FIX · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>1.444,89</td><td class='num'>+1.16</td></tr><tr><td class='title'><span class='nm'>Howmet Aerospace Inc.</span><span class='tk'>HWM · USA</span></td><td>GD 50 kreuzt GD 200 nach unten</td><td class='num'>221,63</td><td class='num'>+1.14</td></tr><tr><td class='title'><span class='nm'>ASM International N.V.</span><span class='tk'>ASM.AS · Niederlande</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>753,00</td><td class='num'>+1.10</td></tr><tr><td class='title'><span class='nm'>Lam Research Corporation</span><span class='tk'>LRCX · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>264,39</td><td class='num'>+1.07</td></tr><tr><td class='title'><span class='nm'>KLA Corporation</span><span class='tk'>KLAC · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>167,24</td><td class='num'>+1.05</td></tr><tr><td class='title'><span class='nm'>Applied Materials, Inc.</span><span class='tk'>AMAT · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>412,81</td><td class='num'>+1.04</td></tr><tr><td class='title'><span class='nm'>HKEX</span><span class='tk'>0388.HK · Hongkong</span></td><td>GD 50 kreuzt GD 200 nach unten</td><td class='num'>374,60</td><td class='num'>+0.78</td></tr><tr><td class='title'><span class='nm'>NESTLE INDIA LIMITED</span><span class='tk'>NESTLEIND.NS · Indien</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>1.275,80</td><td class='num'>+0.76</td></tr><tr><td class='title'><span class='nm'>Cadence Design Systems, Inc.</span><span class='tk'>CDNS · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>318,24</td><td class='num'>+0.74</td></tr><tr><td class='title'><span class='nm'>T. Rowe Price Group, Inc.</span><span class='tk'>TROW · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>100,44</td><td class='num'>+0.15</td></tr><tr><td class='title'><span class='nm'>Palantir Technologies Inc.</span><span class='tk'>PLTR · USA</span></td><td>Chance/Risiko -1.02 unter Ausstiegsschwelle -1.00</td><td class='num'>185,78</td><td class='num'>-1.02</td></tr><tr><td class='title'><span class='nm'>Veeva Systems Inc.</span><span class='tk'>VEEV · USA</span></td><td>Chance/Risiko -1.10 unter Ausstiegsschwelle -1.00</td><td class='num'>308,02</td><td class='num'>-1.10</td></tr><tr><td class='title'><span class='nm'>The Travelers Companies, Inc.</span><span class='tk'>TRV · USA</span></td><td>Chance/Risiko -1.18 unter Ausstiegsschwelle -1.00</td><td class='num'>389,35</td><td class='num'>-1.18</td></tr><tr><td class='title'><span class='nm'>Fortinet, Inc.</span><span class='tk'>FTNT · USA</span></td><td>Chance/Risiko -3.04 unter Ausstiegsschwelle -1.00</td><td class='num'>168,65</td><td class='num'>-3.04</td></tr></tbody></table></div>
+
+<h2>Güte und Kalibrierung</h2>
+<p>Kalibrierung vom 2026-10-16 · Universum 881 Titel,
+nach Größenfilter 749.</p>
+<div class="two">
+  <div class="card prose"><h4 style="margin:0 0 6px">Rückblick-Test Technik</h4>Testzeitraum 2025-04-17 bis 2026-10-16 (nicht zur Kalibrierung verwendet), 51,484 Beobachtungen. Korrelation Prognose/Ergebnis -0.002. Beste 20 % der Signalzustände: Ø 8-Wochen-Rendite +3,2 % (Trefferquote 58 %) gegenüber +3,2 % (57 %) im Durchschnitt.
+    <h4 style="margin:14px 0 6px">Erfolgskontrolle des Agenten</h4>Noch keine abgeschlossenen Signale (Auswertung jeweils 8 Wochen nach Signal). 6 offen.</div>
+  <div class="card"><table>
+    <thead><tr><th>Analystenhaus (geringste Fehlervarianz)</th><th class="num">Prognosen</th>
+    <th class="num">σ (8 Wo.)</th><th class="num">Verzerrung</th></tr></thead>
+    <tbody><tr><td>Scotiabank</td><td class='num'>194</td><td class='num'>± 2,7 %</td><td class='num'>-1,7 %</td></tr><tr><td>CIBC</td><td class='num'>24</td><td class='num'>± 2,9 %</td><td class='num'>-1,1 %</td></tr><tr><td>Barrington Research</td><td class='num'>26</td><td class='num'>± 2,9 %</td><td class='num'>-0,4 %</td></tr><tr><td>SVB Leerink</td><td class='num'>51</td><td class='num'>± 3,3 %</td><td class='num'>-2,6 %</td></tr><tr><td>HC Wainwright &amp; Co.</td><td class='num'>27</td><td class='num'>± 3,4 %</td><td class='num'>+0,1 %</td></tr><tr><td>Keefe, Bruyette &amp; Woods</td><td class='num'>133</td><td class='num'>± 3,5 %</td><td class='num'>-0,6 %</td></tr><tr><td>Ladenburg Thalmann</td><td class='num'>9</td><td class='num'>± 3,6 %</td><td class='num'>-4,2 %</td></tr><tr><td>Stephens &amp; Co.</td><td class='num'>153</td><td class='num'>± 3,6 %</td><td class='num'>-5,0 %</td></tr><tr><td>Melius Research</td><td class='num'>14</td><td class='num'>± 3,6 %</td><td class='num'>-5,3 %</td></tr><tr><td>Raymond James</td><td class='num'>450</td><td class='num'>± 3,7 %</td><td class='num'>-4,2 %</td></tr><tr><td>BMO Capital</td><td class='num'>542</td><td class='num'>± 3,7 %</td><td class='num'>-3,5 %</td></tr><tr><td>BNP Paribas</td><td class='num'>16</td><td class='num'>± 3,8 %</td><td class='num'>-3,6 %</td></tr></tbody></table>
+    <p class="muted" style="padding:8px 10px 6px;margin:0">Fehlerkorrelation zwischen Häusern ρ_ff = 0.30;
+    Gewichte als long-only Minimum-Varianz-Portfolio über die Fehler-Kovarianzmatrix.
+    σ und Korrelation beziehen sich auf das Messrauschen nach Abzug des gemeinsamen Kursrauschens.
+    Restkorrelation Analyst/Technik ρ_v = 0.20 (Annahme, mit zwei Quellen nicht schätzbar).</p></div>
+</div>
+
+<footer>Automatisch erzeugt aus öffentlichen Marktdaten (Yahoo Finance). Ausstiegsregeln: Chance/Risiko unter
+-1.00, Schlusskurs 2 Tage unter GD 200 oder GD 50 kreuzt GD 200 nach unten.
+Stopp = Kurs − 1,1 Monats-Standardabweichungen.</footer>
+</div></body></html>
