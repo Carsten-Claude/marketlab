@@ -32,9 +32,10 @@ def indicators(close: pd.DataFrame, index_close: pd.DataFrame, tcfg: dict) -> di
     sd = close.rolling(tcfg["bb_period"]).std()
     upper, lower = mid + tcfg["bb_std"] * sd, mid - tcfg["bb_std"] * sd
     pct_b = (close - lower) / (upper - lower)
-    m = tcfg["momentum_days"]
-    mom = close / close.shift(m) - 1
-    idx_mom = index_close / index_close.shift(m) - 1
+    # Momentum 12-1: Rendite der letzten 12 Monate ohne den jüngsten Monat (Standard der Faktorforschung)
+    m, k = tcfg["momentum_days"], tcfg.get("momentum_skip", 0)
+    mom = close.shift(k) / close.shift(m) - 1
+    idx_mom = index_close.shift(k) / index_close.shift(m) - 1
     rel_mom = mom - idx_mom.reindex_like(mom)
     trend = pd.DataFrame(0, index=close.index, columns=close.columns)
     trend[(close > sma_s) & (sma_f > sma_s)] = 1
@@ -56,7 +57,7 @@ def state_key(trend, rsi_v, pct_b, rel_mom) -> str | None:
 def describe_key(key: str) -> str:
     t, r, b, m = key.split("|")
     return (f"Trend {TREND[int(t)]}, RSI {RSI_LABEL[int(r)]}, Bollinger {BB_LABEL[int(b)]}, "
-            f"rel. Momentum {'positiv' if m == '1' else 'negativ'}")
+            f"rel. Momentum 12-1 {'positiv' if m == '1' else 'negativ'}")
 
 
 def state_frame(ind: dict[str, pd.DataFrame]) -> pd.DataFrame:
@@ -96,20 +97,23 @@ def calibrate(states: pd.DataFrame, fwd: pd.DataFrame, tcfg: dict) -> dict:
     return {"buckets": out, "global": glob}
 
 
-def technical_measurement(key: str | None, calib: dict) -> tuple[float, float, int]:
-    """r₂, σ₂², Stichprobengröße für einen aktuellen Signalzustand."""
-    g = calib["global"]
+def raw_measurement(key: str | None, calib: dict) -> tuple[float, int]:
+    """Unkalibrierte Zustandsprognose (Mittelwert der Historie) und Stichprobengröße."""
     if key is None or key not in calib["buckets"]:
-        return g["mean"], g["var"], 0
+        return calib["global"]["mean"], 0
     b = calib["buckets"][key]
-    return b["mean"], b["var"], b["n"]
+    return b["mean"], b["n"]
 
 
-def to_measurement_noise(calib: dict, sigma_eps2: float, floor_share: float) -> None:
-    """Zustands-Varianz = gemeinsames Kursrauschen σε² + Messrauschen σ_vT² -> nur σ_vT² behalten."""
-    for b in calib["buckets"].values():
-        b["var_raw"] = b["var"]
-        b["var"] = max(b["var"] - sigma_eps2, floor_share * b["var"])
-    g = calib["global"]
-    g["var_raw"] = g["var"]
-    g["var"] = max(g["var"] - sigma_eps2, floor_share * g["var"])
+def technical_measurement(key: str | None, calib: dict) -> tuple[float, float, int]:
+    """r₂ (treffsicherheits-kalibriert) und Messrauschen σ_vT² für einen Signalzustand.
+
+    r₂ = μ + b·(Zustandsmittel − μ): Die Spreizung zwischen den Zuständen wird mit der im
+    Testzeitraum gemessenen Treffsicherheit b skaliert (b = 0 -> nur Gesamtmittel μ).
+    """
+    mu = calib["global"]["mean"]
+    raw, n = raw_measurement(key, calib)
+    sk = calib.get("skill")
+    if not sk:
+        return raw, calib["global"]["var"], n
+    return mu + sk["b"] * (raw - mu), sk["var_v"], n

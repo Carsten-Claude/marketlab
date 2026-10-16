@@ -69,7 +69,7 @@ def _row(r: pd.Series) -> str:
   <td class="num opt">{_pct(r['w_analyst'], 0, False)} / {_pct(r['w_tech'], 0, False)}</td>
   <td class="num opt">{_num(r['price'])}</td>
   <td class="num opt">{_num(r['stop'])}</td>
-  <td class="num opt">{_pct(r['fv_gap'], 0)}</td>
+  <td class="num opt">{_pct(r['fv_gap'], 0) if r['fv_ok'] else '<span class="muted" title="Gewinne zu instabil für eine KGV-basierte Bewertung">n. b.</span>'}</td>
   <td class="num opt">{_num(r['quality'], 0)}</td>
 </tr>
 <tr class="det"><td colspan="13">
@@ -85,7 +85,7 @@ def _row(r: pd.Series) -> str:
       <p>Messfehler: r₁ {_pct(r['r1'])} ± {_pct(r['sd1'], 1, False)} · r₂ {_pct(r['r2'])} ± {_pct(r['sd2'], 1, False)}<br>
       Fusion: r̂ {_pct(r['x'])} ± {_pct(r['sd'], 1, False)} · inkl. Kursrauschen ± {_pct(r['sd_total'], 1, False)}</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value {_num(r['fair_value'])} {_e(r['currency'] or '')} ({_pct(r['fv_gap'], 0)} zum Kurs)<br>
+      <p>{f"Fair Value {_num(r['fair_value'])} {_e(r['currency'] or '')} ({_pct(r['fv_gap'], 0)} zum Kurs)" if r['fv_ok'] else "Fair Value nicht belastbar (Gewinne zu instabil)"}<br>
       Gewinnwachstum 12M {_pct(r['growth_12m'])} · Revision 30T {_pct(r['revision_30d'])} · 90T {_pct(r['revision_90d'])}</p>
       <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
       (geplant als dritte und vierte Messquelle).</p></div>
@@ -98,7 +98,17 @@ def render(run: dict, path: str | None = None) -> str:
     calib, cfg, asof, track = run["calib"], run["cfg"], run["asof"], run.get("track", {"n": 0})
     cand = res[res["signal"] != "Ausstieg"].copy()
     cand["prio"] = (cand["signal"] != "Einstieg").astype(int)
-    top = cand.sort_values(["prio", "cr"], ascending=[True, False]).head(cfg["signals"]["top_n"]).copy()
+    cand = cand.sort_values(["prio", "cr"], ascending=[True, False])
+    picked, n_us = [], 0
+    for idx, r in cand.iterrows():          # Quote: höchstens max_us_in_top US-Titel
+        is_us = r["region"] == "USA"
+        if is_us and n_us >= cfg["signals"]["max_us_in_top"]:
+            continue
+        picked.append(idx)
+        n_us += int(is_us)
+        if len(picked) == cfg["signals"]["top_n"]:
+            break
+    top = cand.loc[picked].copy()
     top["rank"] = range(1, len(top) + 1)
     exits = res[res["signal"] == "Ausstieg"]
     n_in, n_out = int((res["signal"] == "Einstieg").sum()), len(exits)
@@ -128,10 +138,22 @@ def render(run: dict, path: str | None = None) -> str:
         track_txt = (f"Noch keine abgeschlossenen Signale (Auswertung jeweils 8 Wochen nach Signal). "
                      f"{track.get('pending', 0)} offen.")
 
+    skt, ska = calib["technical"].get("skill", {}), ca.get("skill", {})
+
+    def _sk(sk):
+        if not sk or sk.get("corr") is None:
+            return "nicht messbar (zu wenige Daten) – Quelle liefert nur den Mittelwert"
+        corr = f"{sk['corr']:+.3f}".replace(".", ",")
+        return (f"Korrelation {corr}, Treffsicherheit b = {_num(sk['b'], 2)} "
+                f"(roh {_num(sk.get('b_raw'), 2)}), Messrauschen ± {_pct(sk['var_v'] ** 0.5, 1, False)}, "
+                f"{_num(sk['n'], 0)} Testfälle")
+    skill_txt = (f"<b>Technik:</b> {_sk(skt)}<br><b>Analysten:</b> {_sk(ska)}<br>"
+                 f"<span class='muted'>b = 1: Prognose voll gültig, b = 0: keine Information. Die Kalman-Gewichte "
+                 f"folgen daraus automatisch.</span>")
     bt_txt = "Noch kein Rückblick-Test verfügbar."
     if bt.get("corr_pred_real") is not None:
         bt_txt = (f"Testzeitraum {bt['period'][0]} bis {bt['period'][1]} (nicht zur Kalibrierung verwendet), "
-                  f"{bt['n']:,} Beobachtungen. Korrelation Prognose/Ergebnis {bt['corr_pred_real']:+.3f}. "
+                  f"{_num(bt['n'], 0)} Beobachtungen. Korrelation Prognose/Ergebnis {_num(bt['corr_pred_real'], 3)}. "
                   f"Beste 20 % der Signalzustände: Ø 8-Wochen-Rendite {_pct(bt['mean_top'])} "
                   f"(Trefferquote {_pct(bt['hit_top'], 0, False)}) gegenüber {_pct(bt['mean_all'])} "
                   f"({_pct(bt['hit_all'], 0, False)}) im Durchschnitt.")
@@ -223,7 +245,7 @@ footer {{ margin-top:40px; color:var(--muted); font-size:12px; max-width:860px; 
 </section>
 
 <h2>Top {len(top)} nach Chance/Risiko</h2>
-<p>Rangkriterium ist r̂/σ: die Kalman-fusionierte erwartete 8-Wochen-Rendite je Schätzfehler. Einstiegssignale stehen vorn, danach die übrigen Titel nach Chance/Risiko. Titel mit aktivem Ausstiegssignal stehen in der Liste darunter.
+<p>Rangkriterium ist r̂/σ: die Kalman-fusionierte erwartete 8-Wochen-Rendite je Schätzfehler. Einstiegssignale stehen vorn, danach die übrigen Titel nach Chance/Risiko; höchstens {cfg["signals"]["max_us_in_top"]} US-Titel. Titel mit aktivem Ausstiegssignal stehen in der Liste darunter.
 r₁ = Analystenquelle (MV = Minimum-Varianz der Top-5-Häuser, Konsens = Rückfall), r₂ = Chartquelle.
 Gewichte zeigen den Anteil Analyst / Technik an der heutigen Fusion.</p>
 <div class="card"><table>
@@ -243,7 +265,8 @@ Gewichte zeigen den Anteil Analyst / Technik an der heutigen Fusion.</p>
 <p>Kalibrierung vom {_e(str(calib['created'])[:10])} · Universum {calib['universe_size']} Titel,
 nach Größenfilter {calib['size_filter']}.</p>
 <div class="two">
-  <div class="card prose"><h4 style="margin:0 0 6px">Rückblick-Test Technik</h4>{bt_txt}
+  <div class="card prose"><h4 style="margin:0 0 6px">Treffsicherheit im Testzeitraum</h4>{skill_txt}
+    <h4 style="margin:14px 0 6px">Rückblick-Test Technik</h4>{bt_txt}
     <h4 style="margin:14px 0 6px">Erfolgskontrolle des Agenten</h4>{track_txt}</div>
   <div class="card"><table>
     <thead><tr><th>Analystenhaus (geringste Fehlervarianz)</th><th class="num">Prognosen</th>

@@ -118,7 +118,8 @@ def measurement(ticker: str, price: float, info: dict, hist: pd.DataFrame | None
             R = np.full((len(sig), len(sig)), calib["rho_ff"])
             np.fill_diagonal(R, 1.0)
             var = float(w @ (np.outer(sig, sig) * R) @ w)
-            r1 = float(np.exp(w @ fc_adj) - 1)
+            sk = calib.get("skill") or {"a": 0.0, "b": 1.0}
+            r1 = float(np.exp(sk["a"] + sk["b"] * float(w @ fc_adj)) - 1)
             return {"r1": r1, "var1": var, "method": "Minimum-Varianz",
                     "detail": [{"firm": f, "target": float(t), "weight": float(x)}
                                for f, t, x in zip(top["firm"], top["target"], w)]}
@@ -131,6 +132,8 @@ def measurement(ticker: str, price: float, info: dict, hist: pd.DataFrame | None
     if hi and lo and mean:
         rel_std = max(rel_std, (hi - lo) / (4 * mean))
     fc = np.log(med / price) * h / 252 + calib["global_bias"]
+    sk = calib.get("skill") or {"a": 0.0, "b": 1.0}
+    fc = sk["a"] + sk["b"] * fc
     var = calib["global_var"] * acfg["horizon_mismatch_penalty"] + (rel_std * h / 252) ** 2
     n = info.get("numberOfAnalystOpinions")
     return {"r1": float(np.exp(fc) - 1), "var1": float(var), "method": "Konsens-Rückfall",
@@ -177,14 +180,52 @@ def estimate_noise(calib_a: dict, tech_lookup, ncfg: dict) -> dict:
             "sd_vA": float(np.sqrt(max(va - s, 0))), "sd_vT": float(np.sqrt(max(vt - s, 0)))}
 
 
-def to_measurement_noise(calib_a: dict, sigma_eps2: float, floor_share: float) -> None:
-    """Fehlervarianzen der Häuser in Messrauschen σ_v² umrechnen (in place)."""
-    for f in calib_a["firms"].values():
+def skill_test(obs: pd.DataFrame, cut: pd.Timestamp, acfg: dict) -> dict:
+    """Treffsicherheit im Testzeitraum: Häuser-Verzerrung nur aus dem Lernzeitraum."""
+    from . import skill
+    if obs is None or obs.empty:
+        return skill.fit([], [])
+    learn, test = obs[obs["date"] < cut], obs[obs["date"] >= cut]
+    if learn.empty or test.empty:
+        return skill.fit([], [])
+    g_bias = learn["err"].mean()
+    k = acfg["min_firm_obs"]
+    bias = {}
+    for f, g in learn.groupby("firm"):
+        n = len(g)
+        bias[f] = (n * g["err"].mean() + k * g_bias) / (n + k)
+    t = test[test["firm"].isin(bias)]
+    pred = t["fc"] + t["firm"].map(bias)
+    real = t["err"] + t["fc"]
+    res = skill.fit(pred.values, real.values)
+    res["period"] = [str(t["date"].min().date()), str(t["date"].max().date())] if len(t) else None
+    return res
+
+
+def apply_skill(calib_a: dict, sk: dict, sigma_eps2: float, floor_share: float) -> None:
+    """Häuser-Fehlervarianzen in kalibriertes Messrauschen umrechnen (in place).
+
+    Relative Güte der Häuser (für die Minimum-Varianz-Gewichte) bleibt erhalten, das Niveau
+    wird so skaliert, dass ein einzelnes Haus das im Testzeitraum gemessene Messrauschen hat.
+    """
+    from . import skill
+    var_v_single = skill.measurement_var(sk["var_e"], sigma_eps2, floor_share)
+    firms = calib_a["firms"]
+    for f in firms.values():
         f["var_raw"] = f["var"]
-        f["var"] = max(f["var"] - sigma_eps2, floor_share * f["var"])
+        f["var_v"] = max(f["var"] - sigma_eps2, floor_share * f["var"])
+    if firms:
+        n = np.array([f["n"] for f in firms.values()], dtype=float)
+        v = np.array([f["var_v"] for f in firms.values()])
+        mean_v = float((n * v).sum() / n.sum())
+        pc = calib_a.get("pair_cov")
+        if pc is not None:
+            calib_a["rho_ff"] = float(np.clip((pc - sigma_eps2) / mean_v, 0.0, 0.95))
+        scale = var_v_single / mean_v
+        for f in firms.values():
+            f["var"] = f["var_v"] * scale
+    else:
+        scale = 1.0
     calib_a["global_var_raw"] = calib_a["global_var"]
-    calib_a["global_var"] = max(calib_a["global_var"] - sigma_eps2, floor_share * calib_a["global_var"])
-    pc = calib_a.get("pair_cov")
-    if pc is not None and calib_a["firms"]:
-        mean_v = float(np.mean([f["var"] for f in calib_a["firms"].values()]))
-        calib_a["rho_ff"] = float(np.clip((pc - sigma_eps2) / mean_v, 0.0, 0.95))
+    calib_a["global_var"] = var_v_single
+    calib_a["skill"] = {**{k: v for k, v in sk.items()}, "var_v": var_v_single, "scale": scale}

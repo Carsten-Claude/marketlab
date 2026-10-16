@@ -15,15 +15,19 @@ Der erste Tageslauf startet automatisch den Monatslauf, wenn noch keine Kalibrie
 ## Methodik in Kürze
 
 - **Horizont:** 8 Wochen (40 Handelstage).
-- **Technik (r₂):** Signalzustand aus Trend (GD 50/200), RSI(14), Bollinger %B und relativem 3-Monats-Momentum.
+- **Technik (r₂):** Signalzustand aus Trend (GD 50/200), RSI(14), Bollinger %B und relativem Momentum 12-1 (12 Monate ohne den jüngsten Monat).
   Jeder Zustand bekommt aus 5 Jahren Kurshistorie die mittlere 8-Wochen-Rendite und deren Varianz.
 - **Analysten (r₁):** US-Titel: Top-5-Häuser mit kleinster historischer Fehlervarianz, Gewichte als
   long-only Minimum-Varianz-Portfolio über die Fehler-Kovarianzmatrix, Verzerrung je Haus korrigiert.
   Sonst: Konsens-Median mit Unsicherheitsaufschlag (im Dashboard als „Konsens“ gekennzeichnet).
+- **Treffsicherheit:** Beide Quellen werden im Testzeitraum (jüngste 30 % der Historie, nicht zur Kalibrierung verwendet)
+  geprüft: y = a + b·r. Verwendet wird r_kal = a + b·r; das Messrauschen folgt aus dem Testfehler. Eine Quelle ohne
+  Treffsicherheit (b ≈ 0) liefert nur noch den Mittelwert und wirkt als Anker.
+- **Qualitätstor:** Watchlist nur mit belegten (≥ 3 Jahre) und stabilen Gewinnen; Fair Value nur bei stabilen Gewinnen.
 - **Rauschmodell:** Realisierte Rendite = wahre erwartete Rendite + gemeinsames Kursrauschen ε.
   σε² wird aus der Kovarianz der Prognosefehler beider Quellen geschätzt; in die Fusion geht nur das Messrauschen ein.
 - **Kalman:** Zustand = wahre erwartete Rendite (Random Walk). Tägliches Update mit korrelierten Messfehlern
-  (ρ_v als Annahme). Rang = r̂ / σ (Schätzfehler der heutigen Fusion).
+  (ρ_v als Annahme). Rang = r̂ / σ (Schätzfehler der heutigen Fusion); Top 10 mit höchstens 5 US-Titeln.
 - **Signale:** Einstieg bei Chance/Risiko > 1, r̂ > 1 % und intaktem Aufwärtstrend. Ausstieg bei Chance/Risiko < −1,
   frischem Bruch des GD 200 (2 Schlusskurse) oder GD 50 kreuzt GD 200 nach unten. Stopp = Kurs − 1,1 Monats-Standardabweichungen.
 - **Erfolgskontrolle:** `state/signal_log.csv` protokolliert jedes Signal; das Dashboard wertet abgeschlossene Signale aus.

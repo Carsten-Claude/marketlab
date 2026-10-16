@@ -10,13 +10,14 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from . import analysts, fundamentals, kalman, signals, technical
+from . import analysts, fundamentals, kalman, signals, skill, technical
 from .data import get_provider
 from .universe import build_universe, region_name, region_suffix
 
 log = logging.getLogger("marketlab")
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 STATE = os.path.join(ROOT, "state")
+MODEL_VERSION = 2   # bei Änderung der Messdefinitionen erhöhen -> Kalman-Zustand startet neu
 
 
 def load_cfg() -> dict:
@@ -94,7 +95,10 @@ def run_monthly(use_web: bool = True) -> None:
     big = pd.DataFrame(rows)
     if big.empty:
         raise RuntimeError("Keine Fundamentaldaten erhalten – Datenquelle prüfen")
-    wl = (big[big["quality"] >= cfg["universe"]["min_quality_score"]]
+    ucfg = cfg["universe"]
+    stable = big["earnings_stability"].notna() & (big["earnings_stability"] <= ucfg["max_earnings_cv"])
+    log.info("Stabilitätstor: %s von %s Titeln mit belegten, stabilen Gewinnen", int(stable.sum()), len(big))
+    wl = (big[stable & (big["quality"] >= ucfg["min_quality_score"])]
           .sort_values("quality", ascending=False).head(cfg["universe"]["watchlist_size"]))
     log.info("Größenfilter: %s Titel, Watchlist: %s", len(big), len(wl))
 
@@ -109,36 +113,45 @@ def run_monthly(use_web: bool = True) -> None:
     backtest = _backtest_technical(states[states.index >= cut], fwd[fwd.index >= cut], calib_learn, cfg)
     calib_t = technical.calibrate(states, fwd, cfg["technical"])   # final: alle Daten
 
-    # 3) Analysten-Kalibrierung (Häuser-Historie, praktisch nur US-Titel)
+    # 3) Analysten-Kalibrierung (Häuser-Historie, praktisch nur US-Titel) + Testzeitraum
     hist = {tk: prov.analyst_targets(tk) for tk in big["ticker"] if region_suffix(tk) == ""}
     calib_a = analysts.calibrate(hist, close, h, cfg["analysts"])
+    skill_a = analysts.skill_test(calib_a.get("obs"), cut, cfg["analysts"])
 
     def tech_lookup(tk, d):
         if tk not in states.columns:
             return None
-        s = states[tk]
-        pos = s.index.searchsorted(d, side="right") - 1
-        if pos < 0:
+        s_ = states[tk]
+        pos = s_.index.searchsorted(d, side="right") - 1
+        if pos < 0 or pd.isna(s_.iloc[pos]):
             return None
-        return technical.technical_measurement(s.iloc[pos], calib_t)[0] if pd.notna(s.iloc[pos]) else None
+        return technical.raw_measurement(s_.iloc[pos], calib_t)[0]
 
+    # 4) Rauschmodell: gemeinsames Kursrauschen σε² von den Messfehlern trennen
     noise = analysts.estimate_noise(calib_a, tech_lookup, cfg["noise"])
     if noise["identified"]:
         s_eps = noise["sigma_eps2"]
     else:
         s_eps = cfg["noise"]["default_eps_share"] * calib_t["global"]["var"]
         noise["sigma_eps2"] = s_eps
-    technical.to_measurement_noise(calib_t, s_eps, cfg["noise"]["floor_share"])
-    analysts.to_measurement_noise(calib_a, s_eps, cfg["noise"]["floor_share"])
+    fl = cfg["noise"]["floor_share"]
+
+    # 5) Treffsicherheit -> kalibrierte Messungen und Messrauschen beider Quellen
+    sk_t = backtest.get("skill") or skill.fit([], [])
+    calib_t["skill"] = {**sk_t, "var_v": skill.measurement_var(sk_t["var_e"], s_eps, fl)}
+    analysts.apply_skill(calib_a, skill_a, s_eps, fl)
     rho = cfg["noise"]["rho_v"]
-    log.info("Rauschmodell: σε = %.3f (%s), ρ_v = %.2f, ρ_ff = %.2f", s_eps ** 0.5,
-             "geschätzt" if noise["identified"] else "Annahme", rho, calib_a["rho_ff"])
+    log.info("Rauschmodell: σε = %.3f (%s) · Technik b = %.2f, σ_v = %.3f · Analysten b = %.2f, σ_v = %.3f · ρ_ff = %.2f",
+             s_eps ** 0.5, "geschätzt" if noise["identified"] else "Annahme",
+             calib_t["skill"]["b"], calib_t["skill"]["var_v"] ** 0.5,
+             calib_a["skill"]["b"], calib_a["skill"]["var_v"] ** 0.5, calib_a["rho_ff"])
 
     os.makedirs(STATE, exist_ok=True)
     wl.to_csv(os.path.join(STATE, "watchlist.csv"), index=False)
     _save_json("fundamentals.json", {k: v for k, v in fund.items() if k in set(wl["ticker"])})
     _save_json("calibration.json", {
         "created": datetime.now(timezone.utc).isoformat(), "provider": prov.name, "horizon_days": h,
+        "version": MODEL_VERSION,
         "technical": calib_t, "analysts": {k: v for k, v in calib_a.items() if k != "obs"},
         "rho": rho, "noise": noise, "backtest": backtest, "universe_size": int(len(uni)), "size_filter": int(len(big)),
     })
@@ -152,17 +165,15 @@ def _backtest_technical(states, fwd, calib, cfg) -> dict:
     df = pd.concat([s.rename("key"), f.rename("ret")], axis=1).dropna()
     if len(df) < 100:
         return {"n": int(len(df))}
-    m = df["key"].map(lambda k: technical.technical_measurement(k, calib))
-    df["pred"] = m.str[0]
-    df["cr"] = m.map(lambda t: t[0] / np.sqrt(t[1]))
-    q = df["cr"].quantile(0.8)
-    top = df[df["cr"] >= q]
+    df["pred"] = df["key"].map(lambda k: technical.raw_measurement(k, calib)[0])
+    q = df["pred"].quantile(0.8)
+    top = df[df["pred"] >= q]
     return {
         "n": int(len(df)),
         "corr_pred_real": float(df[["pred", "ret"]].corr().iloc[0, 1]),
         "mean_all": float(df["ret"].mean()), "hit_all": float((df["ret"] > 0).mean()),
         "mean_top": float(top["ret"].mean()), "hit_top": float((top["ret"] > 0).mean()),
-        "n_top": int(len(top)),
+        "n_top": int(len(top)), "skill": skill.fit(df["pred"].values, df["ret"].values),
         "period": [str(states.index.min().date()), str(states.index.max().date())],
     }
 
@@ -178,6 +189,10 @@ def run_daily() -> dict:
     wl = pd.read_csv(os.path.join(STATE, "watchlist.csv"))
     fund = _load_json("fundamentals.json", {})
     kstate = _load_json("kalman_state.json", {})
+    if kstate.get("_version") != calib.get("version"):
+        log.info("Modellversion geändert – Kalman-Zustand startet neu")
+        kstate = {}
+    kstate["_version"] = calib.get("version")
     rho = calib["rho"]
     asof = pd.Timestamp.today().normalize()
 
@@ -211,7 +226,9 @@ def run_daily() -> dict:
         fin = Financials(eps=f.get("eps", []), eps_dates=[pd.Timestamp(d) for d in f.get("eps_dates", [])])
         grow = fundamentals.expected_growth(est, fin)
         fv = fundamentals.fair_value(fin, close[tk], grow["growth_12m"])
-        fv_gap = (fv["fair_value"] / price - 1) if fv["fair_value"] else None
+        cv = getattr(w, "earnings_stability", None)
+        fv_ok = cv is not None and not pd.isna(cv) and cv <= cfg["universe"]["fair_value_max_cv"]
+        fv_gap = (fv["fair_value"] / price - 1) if (fv["fair_value"] and fv_ok) else None
 
         results.append({
             "ticker": tk, "name": w.name, "region": w.region, "currency": info.get("currency") or w.currency,
@@ -226,7 +243,7 @@ def run_daily() -> dict:
             "rsi": _last(ind["rsi"], tk), "pct_b": _last(ind["pct_b"], tk),
             "sma50": _last(ind["sma50"], tk), "sma200": _last(ind["sma200"], tk),
             "rel_mom": _last(ind["rel_mom"], tk),
-            "fair_value": fv["fair_value"], "fv_gap": fv_gap, **grow,
+            "fair_value": fv["fair_value"] if fv_ok else None, "fv_gap": fv_gap, "fv_ok": bool(fv_ok), **grow,
         })
     res = pd.DataFrame(results).sort_values("cr", ascending=False).reset_index(drop=True)
     res["rank"] = np.arange(1, len(res) + 1)
