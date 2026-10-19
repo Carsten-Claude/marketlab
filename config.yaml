@@ -39,6 +39,8 @@ analysts:
   top_n: 5
   horizon_mismatch_penalty: 1.5   # Varianzaufschlag für 12M-Ziel -> 8-Wochen-Horizont
   fallback_min_rel_std: 0.10      # Mindest-Unsicherheit des Konsensziels (relativ, 12M)
+  rank_buckets: 5                 # Rang-Kalibrierung: Fünftel der Analystenprognosen
+  transfer_penalty: 2.0           # Varianzfaktor, wenn US-Stufen auf Konsensziele übertragen werden
 
 # Rauschmodell: realisierte Rendite = wahre erwartete Rendite + gemeinsames Kursrauschen ε.
 # Nur die Messfehler (nicht ε) gehen in die Kalman-Fusion ein.

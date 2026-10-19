@@ -23,6 +23,8 @@ Der erste Tageslauf startet automatisch den Monatslauf, wenn noch keine Kalibrie
 - **Treffsicherheit:** Beide Quellen werden im Testzeitraum (jüngste 30 % der Historie, nicht zur Kalibrierung verwendet)
   geprüft: y = a + b·r. Verwendet wird r_kal = a + b·r; das Messrauschen folgt aus dem Testfehler. Eine Quelle ohne
   Treffsicherheit (b ≈ 0) liefert nur noch den Mittelwert und wirkt als Anker.
+- **Analysten nach Rang:** Die Analystenprognose bestimmt nur das Fünftel; r₁ ist der im Backtest gemessene Vorsprung
+  dieses Fünftels ggü. Ø aller Titel (im Testzeitraum bestätigt, sonst geschrumpft), Unsicherheit aus nicht überlappenden Blöcken.
 - **Qualitätstor:** Watchlist nur mit belegten (≥ 3 Jahre) und stabilen Gewinnen; Fair Value nur bei stabilen Gewinnen.
 - **Rauschmodell:** Realisierte Rendite = wahre erwartete Rendite + gemeinsames Kursrauschen ε.
   σε² wird aus der Kovarianz der Prognosefehler beider Quellen geschätzt; in die Fusion geht nur das Messrauschen ein.
