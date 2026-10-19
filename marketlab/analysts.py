@@ -198,6 +198,9 @@ def skill_test(obs: pd.DataFrame, cut: pd.Timestamp, acfg: dict) -> dict:
     pred = t["fc"] + t["firm"].map(bias)
     real = t["err"] + t["fc"]
     res = skill.fit(pred.values, real.values)
+    if len(pred) >= 100:
+        q = np.quantile(pred.values, 0.8)
+        res["spread"] = float(real.values[pred.values >= q].mean() - real.values.mean())
     res["period"] = [str(t["date"].min().date()), str(t["date"].max().date())] if len(t) else None
     return res
 

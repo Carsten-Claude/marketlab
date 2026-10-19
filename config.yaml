@@ -3,6 +3,7 @@
 
 horizon_days: 40            # Anlagehorizont: 8 Wochen = 40 Handelstage
 history_years: 5            # Kurshistorie für Kalibrierung / Rückblick-Test
+horizon_test_weeks: [8, 13, 26]   # Horizonttest im Monatslauf
 
 universe:
   min_market_cap_usd: 10000000000
@@ -52,9 +53,9 @@ kalman:
   init_std: 0.10
 
 signals:
-  entry_cr: 1.0              # Einstieg: r̂ mindestens 1 Schätzfehler über null
-  entry_min_return: 0.01     # und r̂ mindestens 1 %
-  exit_cr: -1.0              # Ausstieg: r̂ mindestens 1 Schätzfehler unter null
+  entry_cr: 1.0              # Einstieg: Vorsprung ggü. Watchlist-Median mindestens 1 Schätzfehler
+  entry_min_excess: 0.01     # und Vorsprung mindestens 1 % über den Horizont
+  exit_cr: -1.0              # Ausstieg: Rückstand mindestens 1 Schätzfehler
   gd200_break_days: 2
   stop_monthly_std: 1.1      # Veto-Gate: Stopp ≥ 1,1 Monats-Standardabweichungen
   top_n: 10

@@ -27,10 +27,11 @@ Der erste Tageslauf startet automatisch den Monatslauf, wenn noch keine Kalibrie
 - **Rauschmodell:** Realisierte Rendite = wahre erwartete Rendite + gemeinsames Kursrauschen ε.
   σε² wird aus der Kovarianz der Prognosefehler beider Quellen geschätzt; in die Fusion geht nur das Messrauschen ein.
 - **Kalman:** Zustand = wahre erwartete Rendite (Random Walk). Tägliches Update mit korrelierten Messfehlern
-  (ρ_v als Annahme). Rang = r̂ / σ (Schätzfehler der heutigen Fusion); Top 10 mit höchstens 5 US-Titeln.
-- **Signale:** Einstieg bei Chance/Risiko > 1, r̂ > 1 % und intaktem Aufwärtstrend. Ausstieg bei Chance/Risiko < −1,
+  (ρ_v als Annahme). Rang = Vorsprung / σ, mit Vorsprung = r̂ − Watchlist-Median (die gemeinsame Marktdrift zählt nicht als Signal); Top 10 mit höchstens 5 US-Titeln.
+- **Signale:** Einstieg bei Chance/Risiko > 1, Vorsprung > 1 % und intaktem Aufwärtstrend. Ausstieg bei Chance/Risiko < −1,
   frischem Bruch des GD 200 (2 Schlusskurse) oder GD 50 kreuzt GD 200 nach unten. Stopp = Kurs − 1,1 Monats-Standardabweichungen.
-- **Erfolgskontrolle:** `state/signal_log.csv` protokolliert jedes Signal; das Dashboard wertet abgeschlossene Signale aus.
+- **Erfolgskontrolle:** `state/signal_log.csv` protokolliert jedes Signal; das Dashboard vergleicht abgeschlossene Einstiegssignale mit der Ø Watchlist im selben Zeitraum.
+- **Horizonttest:** Der Monatslauf misst die Treffsicherheit beider Quellen zusätzlich für 8, 13 und 26 Wochen.
 
 Alle Schwellen stehen in `config.yaml`.
 

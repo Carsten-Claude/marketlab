@@ -26,6 +26,10 @@ def _num(x, digits=2):
     return s.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _sg(x, digits=2):
+    return f"{x:+.{digits}f}".replace(".", ",")
+
+
 def _e(s) -> str:
     return html.escape(str(s))
 
@@ -44,7 +48,7 @@ def _cr_bar(cr: float, lim: float = 1.0) -> str:
     v = max(-lim, min(lim, cr))
     w = abs(v) / lim * 50
     left = 50 if v >= 0 else 50 - w
-    return (f'<span class="crbar" title="Chance/Risiko {cr:+.2f}"><span class="mid"></span>'
+    return (f'<span class="crbar" title="Chance/Risiko {_sg(cr)}"><span class="mid"></span>'
             f'<span class="fill" style="left:{left:.1f}%;width:{w:.1f}%"></span></span>')
 
 
@@ -61,8 +65,9 @@ def _row(r: pd.Series) -> str:
   <td class="num rank opt">{int(r['rank'])}</td>
   <td class="title"><span class="nm">{_e(r['name'])}</span><span class="tk">{_e(r['ticker'])} · {_e(r['region'])}</span></td>
   <td>{BADGE[r['signal']]}</td>
-  <td class="num"><span class="crval">{r['cr']:+.2f}</span>{_cr_bar(r['cr'])}</td>
-  <td class="num strong">{_pct(r['x'])}</td>
+  <td class="num"><span class="crval">{_sg(r['cr'])}</span>{_cr_bar(r['cr'])}</td>
+  <td class="num strong">{_pct(r['excess'])}</td>
+  <td class="num opt">{_pct(r['x'])}</td>
   <td class="num opt">± {_pct(r['sd'], 1, False)}</td>
   <td class="num opt">{_pct(r['r1'])} <span class="tag {method_cls}">{method_lbl}</span></td>
   <td class="num opt">{_pct(r['r2'])}</td>
@@ -72,7 +77,7 @@ def _row(r: pd.Series) -> str:
   <td class="num opt">{_pct(r['fv_gap'], 0) if r['fv_ok'] else '<span class="muted" title="Gewinne zu instabil für eine KGV-basierte Bewertung">n. b.</span>'}</td>
   <td class="num opt">{_num(r['quality'], 0)}</td>
 </tr>
-<tr class="det"><td colspan="13">
+<tr class="det"><td colspan="14">
   <details><summary>Begründung und Details</summary>
   <div class="detgrid">
     <div><h4>Signal</h4><ul>{reasons}</ul>
@@ -117,12 +122,25 @@ def render(run: dict, path: str | None = None) -> str:
     ca = calib["analysts"]
     firms = sorted(ca["firms"].items(), key=lambda kv: kv[1]["var"])[:12]
     n_mv = int((res["analyst_method"] == "Minimum-Varianz").sum())
+    mu = float(res["mu"].iloc[0]) if len(res) else 0.0
+    hz = calib.get("horizon_test") or []
+
+    def _c(x):
+        return "–" if x is None else f"{x:+.3f}".replace(".", ",")
+    hz_rows = "".join(
+        f"<tr><td>{h['weeks']} Wochen</td><td class='num'>{_c(h['tech_corr'])}</td><td class='num'>{_pct(h['tech_spread_pa'])}</td>"
+        f"<td class='num'>{_c(h['ana_corr'])}</td><td class='num'>{_pct(h['ana_spread_pa'])}</td></tr>" for h in hz)
+    hz_txt = (f"<table class='mini'><thead><tr><th>Horizont</th><th class='num'>Technik Korr.</th>"
+              f"<th class='num'>Spreizung p. a.</th><th class='num'>Analysten Korr.</th><th class='num'>Spreizung p. a.</th>"
+              f"</tr></thead><tbody>{hz_rows}</tbody></table><span class='muted'>Spreizung = Ø Rendite der besten 20 % "
+              f"der Prognosen minus Ø aller Fälle, auf ein Jahr hochgerechnet.</span>") if hz else \
+             "Wird beim nächsten Monatslauf erstellt." 
     noise = calib["noise"]
 
     exit_rows = "".join(
         f"<tr><td class='title'><span class='nm'>{_e(r['name'])}</span><span class='tk'>{_e(r['ticker'])} · {_e(r['region'])}</span></td>"
         f"<td>{_e('; '.join(r['reasons']))}</td><td class='num'>{_num(r['price'])}</td>"
-        f"<td class='num'>{r['cr']:+.2f}</td></tr>" for _, r in exits.iterrows()) or \
+        f"<td class='num'>{_sg(r['cr'])}</td></tr>" for _, r in exits.iterrows()) or \
         "<tr><td colspan='4' class='muted'>Keine Ausstiegssignale in der Watchlist.</td></tr>"
 
     firm_rows = "".join(
@@ -131,8 +149,9 @@ def render(run: dict, path: str | None = None) -> str:
         "<tr><td colspan='4' class='muted'>Keine Häuser-Historie verfügbar – überall Konsens-Rückfall.</td></tr>"
 
     if track.get("n", 0) > 0:
-        track_txt = (f"{track['n']} abgeschlossene Einstiegssignale: Ø Rendite nach 8 Wochen {_pct(track['mean'])}, "
-                     f"Trefferquote {_pct(track['hit'], 0, False)}, Ø Prognose {_pct(track['mean_pred'])}. "
+        track_txt = (f"{track['n']} abgeschlossene Einstiegssignale: Ø Rendite nach 8 Wochen {_pct(track['mean'])} "
+                     f"gegenüber {_pct(track['bench'])} der Watchlist im selben Zeitraum, Vorsprung {_pct(track['excess'])}; "
+                     f"besser als die Watchlist in {_pct(track['hit_excess'], 0, False)} der Fälle. "
                      f"{track.get('pending', 0)} noch offen.")
     else:
         track_txt = (f"Noch keine abgeschlossenen Signale (Auswertung jeweils 8 Wochen nach Signal). "
@@ -241,16 +260,17 @@ footer {{ margin-top:40px; color:var(--muted); font-size:12px; max-width:860px; 
   <div class="kpi"><div class="v">{n_in}</div><div class="l">Einstiegssignale</div></div>
   <div class="kpi"><div class="v">{n_out}</div><div class="l">Ausstiegssignale</div></div>
   <div class="kpi"><div class="v">{n_mv}</div><div class="l">Titel mit Minimum-Varianz-Analystenziel</div></div>
+  <div class="kpi"><div class="v">{_pct(mu)}</div><div class="l">Watchlist-Median r̂ (8 Wochen, Bezugswert)</div></div>
   <div class="kpi"><div class="v">{_pct(noise['sigma_eps2'] ** 0.5, 1, False)}</div><div class="l">Kursrauschen σε (8 Wochen, {'geschätzt' if noise['identified'] else 'Annahme'})</div></div>
 </section>
 
 <h2>Top {len(top)} nach Chance/Risiko</h2>
-<p>Rangkriterium ist r̂/σ: die Kalman-fusionierte erwartete 8-Wochen-Rendite je Schätzfehler. Einstiegssignale stehen vorn, danach die übrigen Titel nach Chance/Risiko; höchstens {cfg["signals"]["max_us_in_top"]} US-Titel. Titel mit aktivem Ausstiegssignal stehen in der Liste darunter.
+<p>Rangkriterium ist der Vorsprung je Schätzfehler: Kalman-fusionierte erwartete 8-Wochen-Rendite r̂ abzüglich des Watchlist-Medians ({_pct(mu)}), geteilt durch σ. Die gemeinsame Marktdrift zählt damit nicht als Signal. Einstiegssignale stehen vorn, danach die übrigen Titel nach Chance/Risiko; höchstens {cfg["signals"]["max_us_in_top"]} US-Titel. Titel mit aktivem Ausstiegssignal stehen in der Liste darunter.
 r₁ = Analystenquelle (MV = Minimum-Varianz der Top-5-Häuser, Konsens = Rückfall), r₂ = Chartquelle.
 Gewichte zeigen den Anteil Analyst / Technik an der heutigen Fusion.</p>
 <div class="card"><table>
 <thead><tr><th class="num opt">#</th><th>Titel</th><th>Signal</th><th class="num">Chance/Risiko</th>
-<th class="num">r̂ (Kalman)</th><th class="num opt">Schätzfehler σ</th><th class="num opt">r₁ Analysten</th><th class="num opt">r₂ Technik</th>
+<th class="num">Vorsprung</th><th class="num opt">r̂ (Kalman)</th><th class="num opt">Schätzfehler σ</th><th class="num opt">r₁ Analysten</th><th class="num opt">r₂ Technik</th>
 <th class="num opt">Gewicht A / T</th><th class="num opt">Kurs</th><th class="num opt">Stopp</th><th class="num opt">Fair Value</th>
 <th class="num opt">Qualität</th></tr></thead>
 <tbody>{rows}</tbody></table></div>
@@ -266,6 +286,7 @@ Gewichte zeigen den Anteil Analyst / Technik an der heutigen Fusion.</p>
 nach Größenfilter {calib['size_filter']}.</p>
 <div class="two">
   <div class="card prose"><h4 style="margin:0 0 6px">Treffsicherheit im Testzeitraum</h4>{skill_txt}
+    <h4 style="margin:14px 0 6px">Horizonttest (Testzeitraum)</h4>{hz_txt}
     <h4 style="margin:14px 0 6px">Rückblick-Test Technik</h4>{bt_txt}
     <h4 style="margin:14px 0 6px">Erfolgskontrolle des Agenten</h4>{track_txt}</div>
   <div class="card"><table>
@@ -279,7 +300,7 @@ nach Größenfilter {calib['size_filter']}.</p>
 </div>
 
 <footer>Automatisch erzeugt aus öffentlichen Marktdaten (Yahoo Finance). Ausstiegsregeln: Chance/Risiko unter
-{cfg['signals']['exit_cr']:+.2f}, Schlusskurs {cfg['signals']['gd200_break_days']} Tage unter GD 200 oder GD 50 kreuzt GD 200 nach unten.
+{_sg(cfg['signals']['exit_cr'])}, Schlusskurs {cfg['signals']['gd200_break_days']} Tage unter GD 200 oder GD 50 kreuzt GD 200 nach unten.
 Stopp = Kurs − {_num(cfg['signals']['stop_monthly_std'], 1)} Monats-Standardabweichungen.</footer>
 </div></body></html>"""
     path = path or os.path.join(ROOT, "docs", "index.html")

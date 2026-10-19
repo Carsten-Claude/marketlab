@@ -17,7 +17,7 @@ from .universe import build_universe, region_name, region_suffix
 log = logging.getLogger("marketlab")
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 STATE = os.path.join(ROOT, "state")
-MODEL_VERSION = 2   # bei Änderung der Messdefinitionen erhöhen -> Kalman-Zustand startet neu
+MODEL_VERSION = 3   # bei Änderung der Messdefinitionen erhöhen -> Kalman-Zustand startet neu
 
 
 def load_cfg() -> dict:
@@ -146,6 +146,9 @@ def run_monthly(use_web: bool = True) -> None:
              calib_t["skill"]["b"], calib_t["skill"]["var_v"] ** 0.5,
              calib_a["skill"]["b"], calib_a["skill"]["var_v"] ** 0.5, calib_a["rho_ff"])
 
+    # 6) Horizonttest: Treffsicherheit beider Quellen für alternative Horizonte
+    horizon_test = _horizon_test(close, states, hist, cut, cfg)
+
     os.makedirs(STATE, exist_ok=True)
     wl.to_csv(os.path.join(STATE, "watchlist.csv"), index=False)
     _save_json("fundamentals.json", {k: v for k, v in fund.items() if k in set(wl["ticker"])})
@@ -153,8 +156,40 @@ def run_monthly(use_web: bool = True) -> None:
         "created": datetime.now(timezone.utc).isoformat(), "provider": prov.name, "horizon_days": h,
         "version": MODEL_VERSION,
         "technical": calib_t, "analysts": {k: v for k, v in calib_a.items() if k != "obs"},
-        "rho": rho, "noise": noise, "backtest": backtest, "universe_size": int(len(uni)), "size_filter": int(len(big)),
+        "rho": rho, "noise": noise, "backtest": backtest, "horizon_test": horizon_test, "universe_size": int(len(uni)), "size_filter": int(len(big)),
     })
+
+
+def _horizon_test(close, states, hist, cut, cfg) -> list[dict]:
+    """Treffsicherheit (Testzeitraum) von Technik und Analysten je Horizont.
+
+    Spreizung = Ø Rendite der besten 20 % minus Ø aller Fälle, zusätzlich auf ein Jahr hochgerechnet,
+    damit Horizonte vergleichbar sind.
+    """
+    out = []
+    for weeks in cfg.get("horizon_test_weeks", [8, 13, 26]):
+        h = int(weeks * 5)
+        fwd = technical.forward_returns(close, h)
+        cl = technical.calibrate(states[states.index < cut], fwd[fwd.index < cut], cfg["technical"])
+        bt = _backtest_technical(states[states.index >= cut], fwd[fwd.index >= cut], cl, cfg)
+        ca = analysts.calibrate(hist, close, h, cfg["analysts"])
+        sa = analysts.skill_test(ca.get("obs"), cut, cfg["analysts"])
+        sk_t = bt.get("skill") or {}
+        row = {"weeks": weeks, "h": h,
+               "tech_corr": sk_t.get("corr"), "tech_b": sk_t.get("b_raw"), "tech_n": bt.get("n"),
+               "tech_spread": (bt["mean_top"] - bt["mean_all"]) if "mean_top" in bt else None,
+               "ana_corr": sa.get("corr"), "ana_b": sa.get("b_raw"), "ana_n": sa.get("n"),
+               "ana_spread": sa.get("spread")}
+        for k in ("tech_spread", "ana_spread"):
+            row[k + "_pa"] = (row[k] * 52 / weeks) if row[k] is not None else None
+        log.info("Horizonttest %s Wochen: Technik corr %s b %s · Analysten corr %s b %s", weeks,
+                 _f(row["tech_corr"]), _f(row["tech_b"]), _f(row["ana_corr"]), _f(row["ana_b"]))
+        out.append(row)
+    return out
+
+
+def _f(x):
+    return "–" if x is None else f"{x:+.3f}"
 
 
 def _backtest_technical(states, fwd, calib, cfg) -> dict:
@@ -239,22 +274,32 @@ def run_daily() -> dict:
             "r1": a["r1"], "sd1": float(np.sqrt(a["var1"])) if a["var1"] else None,
             "analyst_method": a["method"], "analyst_detail": a["detail"],
             "r2": r2, "sd2": float(np.sqrt(v2)), "tech_state": technical.describe_key(key) if key else "n/a",
-            "tech_n": n2, "stop": sig["stop"], "trend": sig["trend"],
+            "tech_n": n2, "stop": sig["stop"], "trend": sig["trend"], "events": sig["events"],
             "rsi": _last(ind["rsi"], tk), "pct_b": _last(ind["pct_b"], tk),
             "sma50": _last(ind["sma50"], tk), "sma200": _last(ind["sma200"], tk),
             "rel_mom": _last(ind["rel_mom"], tk),
             "fair_value": fv["fair_value"] if fv_ok else None, "fv_gap": fv_gap, "fv_ok": bool(fv_ok), **grow,
         })
-    res = pd.DataFrame(results).sort_values("cr", ascending=False).reset_index(drop=True)
+    res = pd.DataFrame(results)
+    # Vorsprung gegenüber dem Watchlist-Median: entfernt die gemeinsame Marktdrift, die beide
+    # Quellen jedem Titel gleichermaßen zuschreiben. Signale beruhen nur auf dem Vorsprung.
+    mu = float(res["x"].median())
+    res["mu"] = mu
+    res["excess"] = res["x"] - mu
+    res["cr"] = res["excess"] / res["sd"]
+    dec = [signals.decide(r, cfg["signals"]) for _, r in res.iterrows()]
+    res["signal"] = [d["signal"] for d in dec]
+    res["reasons"] = [d["reasons"] for d in dec]
+    res = res.sort_values("cr", ascending=False).reset_index(drop=True)
     res["rank"] = np.arange(1, len(res) + 1)
     _save_json("kalman_state.json", kstate)
     _append_log(res, asof)
-    track = _track_record(close, h)
+    track = _track_record(close, h, wl["ticker"].tolist())
     return {"results": res, "calib": calib, "asof": asof, "cfg": cfg, "track": track}
 
 
-def _track_record(close: pd.DataFrame, h: int) -> dict:
-    """Erfolgskontrolle: Was brachten frühere Einstiegssignale nach h Handelstagen?"""
+def _track_record(close: pd.DataFrame, h: int, universe: list[str]) -> dict:
+    """Erfolgskontrolle: Einstiegssignale nach h Handelstagen, verglichen mit der Ø Watchlist."""
     p = os.path.join(STATE, "signal_log.csv")
     if not os.path.exists(p):
         return {"n": 0}
@@ -262,7 +307,9 @@ def _track_record(close: pd.DataFrame, h: int) -> dict:
     ent = log_df[log_df["signal"] == "Einstieg"].copy()
     # nur das erste Einstiegssignal einer Serie zählen (sonst täglich doppelt)
     ent = ent.sort_values("date").drop_duplicates(["ticker"], keep="first") if len(ent) else ent
-    rets, preds = [], []
+    cols = [t for t in universe if t in close.columns]
+    fwd = close[cols].shift(-h) / close[cols] - 1
+    rets, bench = [], []
     for r in ent.itertuples(index=False):
         if r.ticker not in close.columns:
             continue
@@ -271,11 +318,14 @@ def _track_record(close: pd.DataFrame, h: int) -> dict:
         if pos + h >= len(s):
             continue
         rets.append(float(s.iloc[pos + h] / s.iloc[pos] - 1))
-        preds.append(float(r.x))
+        d = s.index[pos]
+        bench.append(float(fwd.loc[d].mean()) if d in fwd.index else np.nan)
     if not rets:
         return {"n": 0, "pending": int(len(ent))}
-    return {"n": len(rets), "mean": float(np.mean(rets)), "hit": float(np.mean(np.array(rets) > 0)),
-            "mean_pred": float(np.mean(preds)), "pending": int(len(ent) - len(rets))}
+    rets, bench = np.array(rets), np.array(bench)
+    return {"n": len(rets), "mean": float(rets.mean()), "hit": float((rets > 0).mean()),
+            "bench": float(np.nanmean(bench)), "excess": float(np.nanmean(rets - bench)),
+            "hit_excess": float(np.nanmean(rets > bench)), "pending": int(len(ent) - len(rets))}
 
 
 def _last(df: pd.DataFrame, tk: str):
@@ -288,7 +338,7 @@ def _last(df: pd.DataFrame, tk: str):
 def _append_log(res: pd.DataFrame, asof: pd.Timestamp) -> None:
     """Signal-Protokoll für die spätere Erfolgsmessung des Agenten."""
     p = os.path.join(STATE, "signal_log.csv")
-    cols = ["rank", "ticker", "signal", "price", "x", "sd", "cr", "r1", "r2", "w_analyst", "analyst_method"]
+    cols = ["rank", "ticker", "signal", "price", "x", "mu", "excess", "sd", "cr", "r1", "r2", "w_analyst", "analyst_method"]
     out = res[cols].copy()
     out.insert(0, "date", str(asof.date()))
     if os.path.exists(p):
