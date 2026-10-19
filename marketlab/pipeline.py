@@ -17,7 +17,7 @@ from .universe import build_universe, region_name, region_suffix
 log = logging.getLogger("marketlab")
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 STATE = os.path.join(ROOT, "state")
-MODEL_VERSION = 3   # bei Änderung der Messdefinitionen erhöhen -> Kalman-Zustand startet neu
+MODEL_VERSION = 4   # bei Änderung der Messdefinitionen erhöhen -> Kalman-Zustand startet neu
 
 
 def load_cfg() -> dict:
@@ -140,6 +140,8 @@ def run_monthly(use_web: bool = True) -> None:
     sk_t = backtest.get("skill") or skill.fit([], [])
     calib_t["skill"] = {**sk_t, "var_v": skill.measurement_var(sk_t["var_e"], s_eps, fl)}
     analysts.apply_skill(calib_a, skill_a, s_eps, fl)
+    calib_a["rank"] = analysts.rank_calibrate(calib_a.get("obs"), close, cut, h, cfg["analysts"])
+    calib_a["rank"]["mu"] = float(np.log1p(calib_t["global"]["mean"]))
     rho = cfg["noise"]["rho_v"]
     log.info("Rauschmodell: σε = %.3f (%s) · Technik b = %.2f, σ_v = %.3f · Analysten b = %.2f, σ_v = %.3f · ρ_ff = %.2f",
              s_eps ** 0.5, "geschätzt" if noise["identified"] else "Annahme",
@@ -272,7 +274,7 @@ def run_daily() -> dict:
             "sd_total": float(np.sqrt(fused["var_static"] + calib["noise"]["sigma_eps2"])),
             "x_static": fused["x_static"], "w_analyst": fused["w1"], "w_tech": fused["w2"],
             "r1": a["r1"], "sd1": float(np.sqrt(a["var1"])) if a["var1"] else None,
-            "analyst_method": a["method"], "analyst_detail": a["detail"],
+            "analyst_method": a["method"], "analyst_detail": a["detail"], "quintile": a.get("quintile"),
             "r2": r2, "sd2": float(np.sqrt(v2)), "tech_state": technical.describe_key(key) if key else "n/a",
             "tech_n": n2, "stop": sig["stop"], "trend": sig["trend"], "events": sig["events"],
             "rsi": _last(ind["rsi"], tk), "pct_b": _last(ind["pct_b"], tk),
@@ -290,7 +292,7 @@ def run_daily() -> dict:
     dec = [signals.decide(r, cfg["signals"]) for _, r in res.iterrows()]
     res["signal"] = [d["signal"] for d in dec]
     res["reasons"] = [d["reasons"] for d in dec]
-    res = res.sort_values("cr", ascending=False).reset_index(drop=True)
+    res = res.sort_values(["cr", "quality"], ascending=False).reset_index(drop=True)
     res["rank"] = np.arange(1, len(res) + 1)
     _save_json("kalman_state.json", kstate)
     _append_log(res, asof)

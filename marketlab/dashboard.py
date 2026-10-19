@@ -57,7 +57,7 @@ def _row(r: pd.Series) -> str:
         f"<tr><td>{_e(d['firm'])}</td><td class='num'>{_num(d['target'])}</td>"
         f"<td class='num'>{_pct(d['weight'], 0, False)}</td></tr>" for d in r["analyst_detail"])
     method_cls = "mv" if r["analyst_method"] == "Minimum-Varianz" else "fb"
-    method_lbl = "MV" if method_cls == "mv" else "Konsens"
+    method_lbl = ("MV" if method_cls == "mv" else "Konsens") + (f" · F{int(r['quintile'])}" if r.get("quintile") == r.get("quintile") and r.get("quintile") else "")
     reasons = "".join(f"<li>{_e(x)}</li>" for x in r["reasons"])
     trend = {1: "auf", 0: "gemischt", -1: "ab"}.get(r["trend"], "–")
     return f"""
@@ -83,7 +83,7 @@ def _row(r: pd.Series) -> str:
     <div><h4>Signal</h4><ul>{reasons}</ul>
       <h4>Technik</h4><p>Kurs {_num(r['price'])} {_e(r['currency'] or '')} · Stopp {_num(r['stop'])} · Qualität {_num(r['quality'], 0)}<br>{_e(r['tech_state'])} · Stichprobe {int(r['tech_n']):,} Fälle<br>
       RSI {_num(r['rsi'], 0)} · %B {_num(r['pct_b'], 2)} · GD 50 {_num(r['sma50'])} · GD 200 {_num(r['sma200'])} ·
-      Trend {trend} · rel. Momentum 3M {_pct(r['rel_mom'])}</p></div>
+      Trend {trend} · rel. Momentum 12-1 {_pct(r['rel_mom'])}</p></div>
     <div><h4>Analysten ({_e(r['analyst_method'])})</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
       <tbody>{detail}</tbody></table>
@@ -103,7 +103,7 @@ def render(run: dict, path: str | None = None) -> str:
     calib, cfg, asof, track = run["calib"], run["cfg"], run["asof"], run.get("track", {"n": 0})
     cand = res[res["signal"] != "Ausstieg"].copy()
     cand["prio"] = (cand["signal"] != "Einstieg").astype(int)
-    cand = cand.sort_values(["prio", "cr"], ascending=[True, False])
+    cand = cand.sort_values(["prio", "cr", "quality"], ascending=[True, False, False])
     picked, n_us = [], 0
     for idx, r in cand.iterrows():          # Quote: höchstens max_us_in_top US-Titel
         is_us = r["region"] == "USA"
@@ -124,6 +124,20 @@ def render(run: dict, path: str | None = None) -> str:
     n_mv = int((res["analyst_method"] == "Minimum-Varianz").sum())
     mu = float(res["mu"].iloc[0]) if len(res) else 0.0
     hz = calib.get("horizon_test") or []
+    rk = ca.get("rank") or {}
+    if rk.get("ok"):
+        rk_rows = "".join(
+            f"<tr><td>F{q + 1}{' (höchste Ziele)' if q == len(rk['m']) - 1 else (' (niedrigste)' if q == 0 else '')}</td>"
+            f"<td class='num'>{_pct(rk['m_learn'][q])}</td><td class='num'>{_pct(rk['m_test'][q])}</td>"
+            f"<td class='num'>{_pct(rk['m'][q])} ± {_pct(rk['se'][q], 1, False)}</td><td class='num'>{_num(rk['n'][q], 0)}</td></tr>"
+            for q in range(len(rk["m"])))
+        rk_txt = (f"<table class='mini'><thead><tr><th>Fünftel</th><th class='num'>Lernzeitraum</th><th class='num'>Testzeitraum</th>"
+                  f"<th class='num'>verwendet</th><th class='num'>Fälle</th></tr></thead><tbody>{rk_rows}</tbody></table>"
+                  f"<span class='muted'>Vorsprung ggü. Ø aller Titel über 8 Wochen. Bestätigung im Testzeitraum b = "
+                  f"{_num(rk.get('b_raw'), 2)} → Stufen mit Faktor {_num(rk['b'], 2)} verwendet. Unsicherheit aus "
+                  f"{rk['n_blocks']} nicht überlappenden 8-Wochen-Blöcken.</span>")
+    else:
+        rk_txt = "Zu wenige Daten für eine Rang-Kalibrierung – Analystenquelle neutral."
 
     def _c(x):
         return "–" if x is None else f"{x:+.3f}".replace(".", ",")
@@ -166,7 +180,7 @@ def render(run: dict, path: str | None = None) -> str:
         return (f"Korrelation {corr}, Treffsicherheit b = {_num(sk['b'], 2)} "
                 f"(roh {_num(sk.get('b_raw'), 2)}), Messrauschen ± {_pct(sk['var_v'] ** 0.5, 1, False)}, "
                 f"{_num(sk['n'], 0)} Testfälle")
-    skill_txt = (f"<b>Technik:</b> {_sk(skt)}<br><b>Analysten:</b> {_sk(ska)}<br>"
+    skill_txt = (f"<b>Technik:</b> {_sk(skt)}<br><b>Analysten (linear, nur zur Information):</b> {_sk(ska)}<br>"
                  f"<span class='muted'>b = 1: Prognose voll gültig, b = 0: keine Information. Die Kalman-Gewichte "
                  f"folgen daraus automatisch.</span>")
     bt_txt = "Noch kein Rückblick-Test verfügbar."
@@ -286,6 +300,7 @@ Gewichte zeigen den Anteil Analyst / Technik an der heutigen Fusion.</p>
 nach Größenfilter {calib['size_filter']}.</p>
 <div class="two">
   <div class="card prose"><h4 style="margin:0 0 6px">Treffsicherheit im Testzeitraum</h4>{skill_txt}
+    <h4 style="margin:14px 0 6px">Analysten nach Rang (Fünftel)</h4>{rk_txt}
     <h4 style="margin:14px 0 6px">Horizonttest (Testzeitraum)</h4>{hz_txt}
     <h4 style="margin:14px 0 6px">Rückblick-Test Technik</h4>{bt_txt}
     <h4 style="margin:14px 0 6px">Erfolgskontrolle des Agenten</h4>{track_txt}</div>

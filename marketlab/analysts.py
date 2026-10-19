@@ -100,10 +100,75 @@ def min_variance_weights(sig: np.ndarray, rho: float) -> np.ndarray:
         active[idx[np.argmin(w_sub)]] = False
 
 
+def rank_calibrate(obs: pd.DataFrame, close: pd.DataFrame, cut: pd.Timestamp, h: int, acfg: dict) -> dict:
+    """Rang-Kalibrierung der Analystenquelle (Fünftel statt Gerade).
+
+    1. Vorsprung jeder historischen Prognose: realisierte Log-Rendite minus Ø Log-Rendite aller
+       Titel des Universums im selben Zeitfenster (gemeinsame Marktbewegung entfernt).
+    2. Fünftel-Grenzen aus den verzerrungskorrigierten Prognosen des Lernzeitraums.
+    3. Validierung: Fünftel-Mittel des Lernzeitraums sagen den Vorsprung im Testzeitraum voraus?
+       Steigung b (0 = keine Information, 1 = Stufung hält voll).
+    4. Endgültige Stufen: Fünftel-Mittel über den Gesamtzeitraum × min(max(b, 0), 1);
+       Unsicherheit je Fünftel über nicht überlappende Blöcke der Länge h (Blockmittel-Streuung).
+    """
+    from . import skill
+    nq = acfg.get("rank_buckets", 5)
+    empty = {"ok": False, "edges": [], "m": [0.0] * nq, "se": [0.05] * nq, "b": 0.0}
+    if obs is None or obs.empty:
+        return empty
+    lr = np.log(close).diff(h).shift(-h)              # ln(P_{d+h}/P_d)
+    bench = lr.mean(axis=1, skipna=True).reindex(pd.to_datetime(obs["date"]), method="ffill").values
+    df = obs.assign(y=obs["err"] + obs["fc"], bench=bench).dropna(subset=["bench"])
+    df["ex"] = df["y"] - df["bench"]
+    learn, test = df[df["date"] < cut], df[df["date"] >= cut]
+    if len(learn) < 200 or len(test) < 100:
+        return empty
+    g_bias = learn["err"].mean()
+    k = acfg["min_firm_obs"]
+    bias = {f: (len(g) * g["err"].mean() + k * g_bias) / (len(g) + k) for f, g in learn.groupby("firm")}
+    df["pred"] = df["fc"] + df["firm"].map(bias).fillna(g_bias)
+    learn, test = df[df["date"] < cut], df[df["date"] >= cut]
+    edges = list(np.quantile(learn["pred"], np.linspace(0, 1, nq + 1)[1:-1]))
+    df["q"] = np.digitize(df["pred"], edges)
+    learn, test = df[df["date"] < cut], df[df["date"] >= cut]
+    m_learn = learn.groupby("q")["ex"].mean().reindex(range(nq)).fillna(0.0)
+    m_test = test.groupby("q")["ex"].mean().reindex(range(nq))
+    val = skill.fit(test["q"].map(m_learn).values, test["ex"].values)
+    shrink = float(np.clip(val["b_raw"] if val["b_raw"] is not None else 0.0, 0.0, 1.0))
+    # Blockmittel über nicht überlappende Fenster der Länge h (Kalendertage ≈ h·7/5)
+    block = ((df["date"] - df["date"].min()).dt.days // max(int(h * 7 / 5), 1))
+    df["block"] = block
+    m, se, n = [], [], []
+    for q in range(nq):
+        g = df[df["q"] == q]
+        bm = g.groupby("block")["ex"].mean()
+        mean = float(g["ex"].mean()) if len(g) else 0.0
+        s_ = float(bm.std(ddof=1) / np.sqrt(len(bm))) if len(bm) > 2 else 0.05
+        m.append(mean * shrink)
+        se.append(max(s_, 1e-3))
+        n.append(int(len(g)))
+    log.info("Rang-Kalibrierung Analysten: b = %.2f · Fünftel %s", val["b_raw"] or 0,
+             " / ".join(f"{x * 100:+.1f}%" for x in m))
+    return {"ok": True, "edges": [float(e) for e in edges], "m": m, "se": se, "n": n, "b": shrink,
+            "b_raw": val["b_raw"], "corr": val["corr"],
+            "m_learn": [float(x) for x in m_learn], "m_test": [None if pd.isna(x) else float(x) for x in m_test],
+            "n_blocks": int(df["block"].nunique())}
+
+
+def _bucket(rank: dict, fc: float) -> int:
+    return int(np.digitize(fc, rank["edges"])) if rank.get("edges") else 0
+
+
 def measurement(ticker: str, price: float, info: dict, hist: pd.DataFrame | None,
                 calib: dict, h: int, acfg: dict, asof: pd.Timestamp) -> dict:
-    """Analystenmessung r₁, σ₁² mit Methodenkennzeichnung."""
+    """Analystenmessung r₁, σ₁² mit Methodenkennzeichnung.
+
+    Die (Minimum-Varianz- bzw. Konsens-)Prognose bestimmt nur noch das Fünftel; r₁ ist die im
+    Backtest gemessene Erwartung dieses Fünftels (Marktmittel + Vorsprung), σ₁ deren Unsicherheit.
+    """
     firms = calib["firms"]
+    rank = calib.get("rank") or {}
+    mu = rank.get("mu", 0.0)
     if hist is not None and not hist.empty and firms:
         recent = hist[hist["date"] >= asof - pd.Timedelta(days=acfg["target_lookback_days"])]
         latest = recent.sort_values("date").groupby("firm").tail(1)
@@ -114,29 +179,23 @@ def measurement(ticker: str, price: float, info: dict, hist: pd.DataFrame | None
             sig = np.sqrt(top["var"].values)
             w = min_variance_weights(sig, calib["rho_ff"])
             fc = np.log(top["target"].values / price) * h / 252
-            fc_adj = fc + np.array([firms[f]["bias"] for f in top["firm"]])
-            R = np.full((len(sig), len(sig)), calib["rho_ff"])
-            np.fill_diagonal(R, 1.0)
-            var = float(w @ (np.outer(sig, sig) * R) @ w)
-            sk = calib.get("skill") or {"a": 0.0, "b": 1.0}
-            r1 = float(np.exp(sk["a"] + sk["b"] * float(w @ fc_adj)) - 1)
-            return {"r1": r1, "var1": var, "method": "Minimum-Varianz",
+            fc_adj = float(w @ (fc + np.array([firms[f]["bias"] for f in top["firm"]])))
+            q = _bucket(rank, fc_adj)
+            return {"r1": float(np.exp(mu + rank["m"][q]) - 1) if rank.get("ok") else None,
+                    "var1": float(rank["se"][q] ** 2) if rank.get("ok") else None,
+                    "method": "Minimum-Varianz", "quintile": q + 1, "fc": fc_adj,
                     "detail": [{"firm": f, "target": float(t), "weight": float(x)}
                                for f, t, x in zip(top["firm"], top["target"], w)]}
-    # --- Rückfall: Konsens-Median, Unsicherheit aus globaler Fehlervarianz + Kursziel-Streuung
+    # --- Rückfall: Konsens-Median; Fünftel-Stufen aus US-Häusern übertragen, Unsicherheit erhöht
     med = info.get("targetMedianPrice") or info.get("targetMeanPrice")
-    if not med or not price:
-        return {"r1": None, "var1": None, "method": "keine Analystendaten", "detail": []}
-    hi, lo, mean = info.get("targetHighPrice"), info.get("targetLowPrice"), info.get("targetMeanPrice") or med
-    rel_std = acfg["fallback_min_rel_std"]
-    if hi and lo and mean:
-        rel_std = max(rel_std, (hi - lo) / (4 * mean))
-    fc = np.log(med / price) * h / 252 + calib["global_bias"]
-    sk = calib.get("skill") or {"a": 0.0, "b": 1.0}
-    fc = sk["a"] + sk["b"] * fc
-    var = calib["global_var"] * acfg["horizon_mismatch_penalty"] + (rel_std * h / 252) ** 2
+    if not med or not price or not rank.get("ok"):
+        return {"r1": None, "var1": None, "method": "keine Analystendaten", "quintile": None, "detail": []}
+    fc = float(np.log(med / price) * h / 252 + calib["global_bias"])
+    q = _bucket(rank, fc)
     n = info.get("numberOfAnalystOpinions")
-    return {"r1": float(np.exp(fc) - 1), "var1": float(var), "method": "Konsens-Rückfall",
+    return {"r1": float(np.exp(mu + rank["m"][q]) - 1),
+            "var1": float(rank["se"][q] ** 2 * acfg.get("transfer_penalty", 2.0)),
+            "method": "Konsens-Rückfall", "quintile": q + 1, "fc": fc,
             "detail": [{"firm": f"Konsens ({n or '?'} Analysten)", "target": float(med), "weight": 1.0}]}
 
 
