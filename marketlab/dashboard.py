@@ -194,6 +194,11 @@ def render(run: dict, path: str | None = None) -> str:
     stamp = f"{WEEKDAY[asof.weekday()]}, {asof.strftime('%d.%m.%Y')}"
     rows = "".join(_row(r) for _, r in top.iterrows())
     banner = ('<div class="warn">Testlauf mit synthetischen Daten – keine echten Kurse.</div>' if synth else "")
+    if calib.get("analysts_reused"):
+        banner += (f'<div class="warn">Analystendaten beim letzten Monatslauf nicht abrufbar – '
+                   f'Analysten-Kalibrierung vom {_e(calib["analysts_reused"])} weiterverwendet.</div>')
+    elif not ca.get("n"):
+        banner += '<div class="warn">Keine Analysten-Kalibrierung vorhanden – Analystenquelle eingeschränkt.</div>'
 
     page = f"""<!doctype html>
 <html lang="de"><head><meta charset="utf-8">

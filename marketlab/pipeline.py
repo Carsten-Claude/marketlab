@@ -118,6 +118,14 @@ def run_monthly(use_web: bool = True) -> None:
     calib_a = analysts.calibrate(hist, close, h, cfg["analysts"])
     skill_a = analysts.skill_test(calib_a.get("obs"), cut, cfg["analysts"])
 
+    # Datenausfall absichern: zu wenige Analystendaten -> letzte gute Analysten-Kalibrierung behalten
+    prev = _load_json("calibration.json")
+    reused = None
+    min_obs = cfg["analysts"].get("min_total_obs", 2000)
+    if calib_a["n"] < min_obs and prev and prev.get("analysts", {}).get("n", 0) >= min_obs:
+        reused = prev.get("analysts_reused") or str(prev["created"])[:10]
+        log.warning("Nur %s Analystenprognosen erhalten – verwende Analysten-Kalibrierung vom %s", calib_a["n"], reused)
+
     def tech_lookup(tk, d):
         if tk not in states.columns:
             return None
@@ -139,8 +147,15 @@ def run_monthly(use_web: bool = True) -> None:
     # 5) Treffsicherheit -> kalibrierte Messungen und Messrauschen beider Quellen
     sk_t = backtest.get("skill") or skill.fit([], [])
     calib_t["skill"] = {**sk_t, "var_v": skill.measurement_var(sk_t["var_e"], s_eps, fl)}
-    analysts.apply_skill(calib_a, skill_a, s_eps, fl)
-    calib_a["rank"] = analysts.rank_calibrate(calib_a.get("obs"), close, cut, h, cfg["analysts"])
+    if reused:
+        calib_a = prev["analysts"]
+        noise = prev.get("noise", noise)
+        s_eps = noise["sigma_eps2"]
+        calib_t["skill"] = {**sk_t, "var_v": skill.measurement_var(sk_t["var_e"], s_eps, fl)}
+    else:
+        analysts.apply_skill(calib_a, skill_a, s_eps, fl)
+        calib_a["rank"] = analysts.rank_calibrate(calib_a.get("obs"), close, cut, h, cfg["analysts"])
+    calib_a.setdefault("rank", {"ok": False})
     calib_a["rank"]["mu"] = float(np.log1p(calib_t["global"]["mean"]))
     rho = cfg["noise"]["rho_v"]
     log.info("Rauschmodell: σε = %.3f (%s) · Technik b = %.2f, σ_v = %.3f · Analysten b = %.2f, σ_v = %.3f · ρ_ff = %.2f",
@@ -156,7 +171,7 @@ def run_monthly(use_web: bool = True) -> None:
     _save_json("fundamentals.json", {k: v for k, v in fund.items() if k in set(wl["ticker"])})
     _save_json("calibration.json", {
         "created": datetime.now(timezone.utc).isoformat(), "provider": prov.name, "horizon_days": h,
-        "version": MODEL_VERSION,
+        "version": MODEL_VERSION, "analysts_reused": reused,
         "technical": calib_t, "analysts": {k: v for k, v in calib_a.items() if k != "obs"},
         "rho": rho, "noise": noise, "backtest": backtest, "horizon_test": horizon_test, "universe_size": int(len(uni)), "size_filter": int(len(big)),
     })

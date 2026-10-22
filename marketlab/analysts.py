@@ -169,6 +169,8 @@ def measurement(ticker: str, price: float, info: dict, hist: pd.DataFrame | None
     firms = calib["firms"]
     rank = calib.get("rank") or {}
     mu = rank.get("mu", 0.0)
+    rank_ok = bool(rank.get("ok"))
+    lin = calib.get("skill") or {"a": 0.0, "b": 1.0}
     if hist is not None and not hist.empty and firms:
         recent = hist[hist["date"] >= asof - pd.Timedelta(days=acfg["target_lookback_days"])]
         latest = recent.sort_values("date").groupby("firm").tail(1)
@@ -180,22 +182,37 @@ def measurement(ticker: str, price: float, info: dict, hist: pd.DataFrame | None
             w = min_variance_weights(sig, calib["rho_ff"])
             fc = np.log(top["target"].values / price) * h / 252
             fc_adj = float(w @ (fc + np.array([firms[f]["bias"] for f in top["firm"]])))
-            q = _bucket(rank, fc_adj)
-            return {"r1": float(np.exp(mu + rank["m"][q]) - 1) if rank.get("ok") else None,
-                    "var1": float(rank["se"][q] ** 2) if rank.get("ok") else None,
-                    "method": "Minimum-Varianz", "quintile": q + 1, "fc": fc_adj,
+            if rank_ok:
+                q = _bucket(rank, fc_adj)
+                r1, var1, qn = float(np.exp(mu + rank["m"][q]) - 1), float(rank["se"][q] ** 2), q + 1
+            else:   # Rückfall auf lineare Kalibrierung
+                R = np.full((len(sig), len(sig)), calib["rho_ff"])
+                np.fill_diagonal(R, 1.0)
+                r1 = float(np.exp(lin["a"] + lin["b"] * fc_adj) - 1)
+                var1, qn = float(w @ (np.outer(sig, sig) * R) @ w), None
+            return {"r1": r1, "var1": var1,
+                    "method": "Minimum-Varianz", "quintile": qn, "fc": fc_adj,
                     "detail": [{"firm": f, "target": float(t), "weight": float(x)}
                                for f, t, x in zip(top["firm"], top["target"], w)]}
     # --- Rückfall: Konsens-Median; Fünftel-Stufen aus US-Häusern übertragen, Unsicherheit erhöht
     med = info.get("targetMedianPrice") or info.get("targetMeanPrice")
-    if not med or not price or not rank.get("ok"):
+    if not med or not price:
         return {"r1": None, "var1": None, "method": "keine Analystendaten", "quintile": None, "detail": []}
-    fc = float(np.log(med / price) * h / 252 + calib["global_bias"])
-    q = _bucket(rank, fc)
+    fc = float(np.log(med / price) * h / 252 + calib.get("global_bias", 0.0))
     n = info.get("numberOfAnalystOpinions")
-    return {"r1": float(np.exp(mu + rank["m"][q]) - 1),
-            "var1": float(rank["se"][q] ** 2 * acfg.get("transfer_penalty", 2.0)),
-            "method": "Konsens-Rückfall", "quintile": q + 1, "fc": fc,
+    if rank_ok:
+        q = _bucket(rank, fc)
+        r1, qn = float(np.exp(mu + rank["m"][q]) - 1), q + 1
+        var1 = float(rank["se"][q] ** 2 * acfg.get("transfer_penalty", 2.0))
+    else:   # Rückfall auf lineare Kalibrierung
+        hi, lo, mean = info.get("targetHighPrice"), info.get("targetLowPrice"), info.get("targetMeanPrice") or med
+        rel_std = acfg["fallback_min_rel_std"]
+        if hi and lo and mean:
+            rel_std = max(rel_std, (hi - lo) / (4 * mean))
+        r1, qn = float(np.exp(lin["a"] + lin["b"] * fc) - 1), None
+        var1 = float(calib.get("global_var", 0.12 ** 2) * acfg["horizon_mismatch_penalty"] + (rel_std * h / 252) ** 2)
+    return {"r1": r1, "var1": var1,
+            "method": "Konsens-Rückfall", "quintile": qn, "fc": fc,
             "detail": [{"firm": f"Konsens ({n or '?'} Analysten)", "target": float(med), "weight": 1.0}]}
 
 

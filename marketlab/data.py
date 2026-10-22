@@ -126,6 +126,7 @@ class YahooProvider:
 
     def analyst_targets(self, ticker: str) -> pd.DataFrame:
         """Kursziel-Historie einzelner Häuser: Spalten date, firm, target."""
+        time.sleep(0.4)   # Abrufe gemächlich takten (Yahoo drosselt bei zu vielen Anfragen)
         t = self.yf.Ticker(ticker)
         ud = _retry(lambda: t.upgrades_downgrades)
         if ud is None or ud.empty:

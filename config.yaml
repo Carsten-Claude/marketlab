@@ -40,6 +40,7 @@ analysts:
   horizon_mismatch_penalty: 1.5   # Varianzaufschlag für 12M-Ziel -> 8-Wochen-Horizont
   fallback_min_rel_std: 0.10      # Mindest-Unsicherheit des Konsensziels (relativ, 12M)
   rank_buckets: 5                 # Rang-Kalibrierung: Fünftel der Analystenprognosen
+  min_total_obs: 2000             # darunter gilt der Abruf als gestört -> letzte gute Kalibrierung behalten
   transfer_penalty: 2.0           # Varianzfaktor, wenn US-Stufen auf Konsensziele übertragen werden
 
 # Rauschmodell: realisierte Rendite = wahre erwartete Rendite + gemeinsames Kursrauschen ε.
