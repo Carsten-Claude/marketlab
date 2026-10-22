@@ -57,7 +57,7 @@ kalman:
 
 signals:
   entry_cr: 1.0              # Einstieg: Vorsprung ggü. Watchlist-Median mindestens 1 Schätzfehler
-  entry_min_excess: 0.01     # und Vorsprung mindestens 1 % über den Horizont
+  entry_min_excess: 0.007    # und Vorsprung mindestens 0,7 % über den Horizont (≈ 4,5 % p. a.)
   exit_cr: -1.0              # Ausstieg: Rückstand mindestens 1 Schätzfehler
   gd200_break_days: 2
   stop_monthly_std: 1.1      # Veto-Gate: Stopp ≥ 1,1 Monats-Standardabweichungen
