@@ -307,7 +307,8 @@ def run_daily() -> dict:
     res["mu"] = mu
     res["excess"] = res["x"] - mu
     res["cr"] = res["excess"] / res["sd"]
-    dec = [signals.decide(r, cfg["signals"]) for _, r in res.iterrows()]
+    prev = _previous_signals(asof)
+    dec = [signals.decide(r, cfg["signals"], prev.get(r["ticker"])) for _, r in res.iterrows()]
     res["signal"] = [d["signal"] for d in dec]
     res["reasons"] = [d["reasons"] for d in dec]
     res = res.sort_values(["cr", "quality"], ascending=False).reset_index(drop=True)
@@ -356,6 +357,21 @@ def _last(df: pd.DataFrame, tk: str):
         return None
     s = df[tk].dropna()
     return float(s.iloc[-1]) if len(s) else None
+
+
+def _previous_signals(asof: pd.Timestamp) -> dict:
+    """Signale des letzten Handelstags vor `asof` (nur aktuelles Modell) – Grundlage der Hysterese."""
+    p = os.path.join(STATE, "signal_log.csv")
+    if not os.path.exists(p):
+        return {}
+    d = pd.read_csv(p)
+    if "version" not in d.columns:
+        return {}
+    d = d[(d["version"].fillna(0) >= 4) & (d["date"] < str(asof.date()))]
+    if d.empty:
+        return {}
+    last = d[d["date"] == d["date"].max()]
+    return dict(zip(last["ticker"], last["signal"]))
 
 
 def _append_log(res: pd.DataFrame, asof: pd.Timestamp) -> None:

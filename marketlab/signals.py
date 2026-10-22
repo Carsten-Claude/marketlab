@@ -50,8 +50,12 @@ def evaluate(tk: str, ind: dict[str, pd.DataFrame], fused: dict, scfg: dict) -> 
             "signal": "Halten", "reasons": [], "cr": 0.0}
 
 
-def decide(r, scfg: dict) -> dict:
-    """r: Ergebniszeile mit cr (Vorsprung/σ), excess, trend, events."""
+def decide(r, scfg: dict, prev_signal: str | None = None) -> dict:
+    """r: Ergebniszeile mit cr (Vorsprung/σ), excess, trend, events.
+
+    Hysterese: Ein am Vortag aktives Einstiegssignal bleibt bestehen, solange Vorsprung und
+    Chance/Risiko über den (niedrigeren) Halteschwellen liegen und keine Ausstiegsregel greift.
+    """
     cr, ex = float(r["cr"]), float(r["excess"])
     events = list(r["events"]) if isinstance(r["events"], (list, tuple)) else []
     reasons = []
@@ -61,6 +65,11 @@ def decide(r, scfg: dict) -> dict:
     reasons += events
     if reasons:
         return {"signal": "Ausstieg", "reasons": reasons}
+    if (prev_signal == "Einstieg" and cr > scfg["hold_cr"] and ex > scfg["hold_min_excess"]
+            and r["trend"] == 1 and not (cr > scfg["entry_cr"] and ex > scfg["entry_min_excess"])):
+        return {"signal": "Einstieg", "reasons": [
+            f"Signal vom Vortag bestätigt (Hysterese): Vorsprung {_d(ex, 1, True)} über Halteschwelle "
+            f"{_d(scfg['hold_min_excess'], 1, True)}, Chance/Risiko {_d(cr)}, Aufwärtstrend intakt"]}
     if cr > scfg["entry_cr"] and ex > scfg["entry_min_excess"] and r["trend"] == 1:
         return {"signal": "Einstieg", "reasons": [
             f"Vorsprung {_d(ex, 1, True)} ggü. Watchlist-Median, Chance/Risiko {_d(cr)} über "

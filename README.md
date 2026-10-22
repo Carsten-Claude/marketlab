@@ -30,7 +30,7 @@ Der erste Tageslauf startet automatisch den Monatslauf, wenn noch keine Kalibrie
   σε² wird aus der Kovarianz der Prognosefehler beider Quellen geschätzt; in die Fusion geht nur das Messrauschen ein.
 - **Kalman:** Zustand = wahre erwartete Rendite (Random Walk). Tägliches Update mit korrelierten Messfehlern
   (ρ_v als Annahme). Rang = Vorsprung / σ, mit Vorsprung = r̂ − Watchlist-Median (die gemeinsame Marktdrift zählt nicht als Signal); Top 10 mit höchstens 5 US-Titeln.
-- **Signale:** Einstieg bei Chance/Risiko > 1, Vorsprung > 0,7 % und intaktem Aufwärtstrend. Ausstieg bei Chance/Risiko < −1,
+- **Signale:** Einstieg bei Chance/Risiko > 1, Vorsprung > 0,7 % und intaktem Aufwärtstrend. Hysterese: ein aktives Einstiegssignal bleibt, bis Vorsprung < 0,5 % oder Chance/Risiko < 0,75 fällt. Ausstieg bei Chance/Risiko < −1,
   frischem Bruch des GD 200 (2 Schlusskurse) oder GD 50 kreuzt GD 200 nach unten. Stopp = Kurs − 1,1 Monats-Standardabweichungen.
 - **Erfolgskontrolle:** `state/signal_log.csv` protokolliert jedes Signal; das Dashboard vergleicht abgeschlossene Einstiegssignale mit der Ø Watchlist im selben Zeitraum.
 - **Horizonttest:** Der Monatslauf misst die Treffsicherheit beider Quellen zusätzlich für 8, 13 und 26 Wochen.
