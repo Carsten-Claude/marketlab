@@ -179,7 +179,10 @@ def measurement(ticker: str, price: float, info: dict, hist: pd.DataFrame | None
             latest = latest.assign(var=latest["firm"].map(lambda f: firms[f]["var"]))
             top = latest.nsmallest(acfg["top_n"], "var")
             sig = np.sqrt(top["var"].values)
-            w = min_variance_weights(sig, calib["rho_ff"])
+            # Schrumpfung Richtung Gleichgewichtung: bei stark korrelierten Fehlern (ρ_ff nahe 1)
+            # kippt die reine Minimum-Varianz-Lösung sonst auf ein einzelnes Haus
+            lam = acfg.get("mv_shrinkage", 0.5)
+            w = (1 - lam) * min_variance_weights(sig, calib["rho_ff"]) + lam / len(sig)
             fc = np.log(top["target"].values / price) * h / 252
             fc_adj = float(w @ (fc + np.array([firms[f]["bias"] for f in top["firm"]])))
             if rank_ok:

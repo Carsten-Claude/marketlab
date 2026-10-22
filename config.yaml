@@ -37,6 +37,7 @@ analysts:
   target_lookback_days: 180  # aktuelles Kursziel eines Hauses: nicht älter als 180 Tage
   min_firm_obs: 8            # min. Anzahl ausgewerteter Kursziele je Haus
   top_n: 5
+  mv_shrinkage: 0.5          # Minimum-Varianz-Gewichte zur Hälfte Richtung Gleichgewichtung schrumpfen
   horizon_mismatch_penalty: 1.5   # Varianzaufschlag für 12M-Ziel -> 8-Wochen-Horizont
   fallback_min_rel_std: 0.10      # Mindest-Unsicherheit des Konsensziels (relativ, 12M)
   rank_buckets: 5                 # Rang-Kalibrierung: Fünftel der Analystenprognosen

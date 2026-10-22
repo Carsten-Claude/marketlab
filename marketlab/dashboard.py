@@ -67,17 +67,15 @@ def _row(r: pd.Series) -> str:
   <td>{BADGE[r['signal']]}</td>
   <td class="num"><span class="crval">{_sg(r['cr'])}</span>{_cr_bar(r['cr'])}</td>
   <td class="num strong">{_pct(r['excess'])}</td>
-  <td class="num opt">{_pct(r['x'])}</td>
   <td class="num opt">± {_pct(r['sd'], 1, False)}</td>
   <td class="num opt">{_pct(r['r1'])} <span class="tag {method_cls}">{method_lbl}</span></td>
   <td class="num opt">{_pct(r['r2'])}</td>
-  <td class="num opt">{_pct(r['w_analyst'], 0, False)} / {_pct(r['w_tech'], 0, False)}</td>
   <td class="num opt">{_num(r['price'])}</td>
   <td class="num opt">{_num(r['stop'])}</td>
   <td class="num opt">{_pct(r['fv_gap'], 0) if r['fv_ok'] else '<span class="muted" title="Gewinne zu instabil für eine KGV-basierte Bewertung">n. b.</span>'}</td>
   <td class="num opt">{_num(r['quality'], 0)}</td>
 </tr>
-<tr class="det"><td colspan="14">
+<tr class="det"><td colspan="12">
   <details><summary>Begründung und Details</summary>
   <div class="detgrid">
     <div><h4>Signal</h4><ul>{reasons}</ul>
@@ -88,7 +86,8 @@ def _row(r: pd.Series) -> str:
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
       <tbody>{detail}</tbody></table>
       <p>Messfehler: r₁ {_pct(r['r1'])} ± {_pct(r['sd1'], 1, False)} · r₂ {_pct(r['r2'])} ± {_pct(r['sd2'], 1, False)}<br>
-      Fusion: r̂ {_pct(r['x'])} ± {_pct(r['sd'], 1, False)} · inkl. Kursrauschen ± {_pct(r['sd_total'], 1, False)}</p></div>
+      Fusion: r̂ {_pct(r['x'])} ± {_pct(r['sd'], 1, False)} · inkl. Kursrauschen ± {_pct(r['sd_total'], 1, False)}<br>
+      Gewicht Analyst / Technik: {_pct(r['w_analyst'], 0, False)} / {_pct(r['w_tech'], 0, False)}</p></div>
     <div><h4>Bewertung und Erwartung</h4>
       <p>{f"Fair Value {_num(r['fair_value'])} {_e(r['currency'] or '')} ({_pct(r['fv_gap'], 0)} zum Kurs)" if r['fv_ok'] else "Fair Value nicht belastbar (Gewinne zu instabil)"}<br>
       Gewinnwachstum 12M {_pct(r['growth_12m'])} · Revision 30T {_pct(r['revision_30d'])} · 90T {_pct(r['revision_90d'])}</p>
@@ -239,7 +238,7 @@ td {{ padding:9px 10px; border-bottom:1px solid var(--grid); vertical-align:midd
 .num {{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }}
 .strong {{ font-weight:600; }}
 .rank {{ color:var(--muted); }}
-.title .nm {{ display:block; font-weight:500; }}
+.title .nm {{ display:block; font-weight:500; min-width:150px; }}
 .title .tk {{ display:block; color:var(--muted); font-size:12px; }}
 tr.main td {{ border-bottom:none; }}
 tr.det td {{ padding-top:0; }}
@@ -286,11 +285,11 @@ footer {{ margin-top:40px; color:var(--muted); font-size:12px; max-width:860px; 
 <h2>Top {len(top)} nach Chance/Risiko</h2>
 <p>Rangkriterium ist der Vorsprung je Schätzfehler: Kalman-fusionierte erwartete 8-Wochen-Rendite r̂ abzüglich des Watchlist-Medians ({_pct(mu)}), geteilt durch σ. Die gemeinsame Marktdrift zählt damit nicht als Signal. Einstiegssignale stehen vorn, danach die übrigen Titel nach Chance/Risiko; höchstens {cfg["signals"]["max_us_in_top"]} US-Titel. Titel mit aktivem Ausstiegssignal stehen in der Liste darunter.
 r₁ = Analystenquelle (MV = Minimum-Varianz der Top-5-Häuser, Konsens = Rückfall), r₂ = Chartquelle.
-Gewichte zeigen den Anteil Analyst / Technik an der heutigen Fusion.</p>
+Erwartete Rendite r̂ und Gewichtung der Quellen stehen in den Details.</p>
 <div class="card"><table>
 <thead><tr><th class="num opt">#</th><th>Titel</th><th>Signal</th><th class="num">Chance/Risiko</th>
-<th class="num">Vorsprung</th><th class="num opt">r̂ (Kalman)</th><th class="num opt">Schätzfehler σ</th><th class="num opt">r₁ Analysten</th><th class="num opt">r₂ Technik</th>
-<th class="num opt">Gewicht A / T</th><th class="num opt">Kurs</th><th class="num opt">Stopp</th><th class="num opt">Fair Value</th>
+<th class="num">Vorsprung</th><th class="num opt">Schätzfehler σ</th><th class="num opt">r₁ Analysten</th><th class="num opt">r₂ Technik</th>
+<th class="num opt">Kurs</th><th class="num opt">Stopp</th><th class="num opt">Fair Value</th>
 <th class="num opt">Qualität</th></tr></thead>
 <tbody>{rows}</tbody></table></div>
 

@@ -98,6 +98,9 @@ def run_monthly(use_web: bool = True) -> None:
     ucfg = cfg["universe"]
     stable = big["earnings_stability"].notna() & (big["earnings_stability"] <= ucfg["max_earnings_cv"])
     log.info("Stabilitätstor: %s von %s Titeln mit belegten, stabilen Gewinnen", int(stable.sum()), len(big))
+    # Mehrere Aktiengattungen eines Unternehmens (z. B. GOOGL/GOOG) nur einmal: größte Marktkapitalisierung bleibt
+    big = big.sort_values("market_cap_usd", ascending=False).drop_duplicates("name", keep="first")
+    stable = big["earnings_stability"].notna() & (big["earnings_stability"] <= ucfg["max_earnings_cv"])
     wl = (big[stable & (big["quality"] >= ucfg["min_quality_score"])]
           .sort_values("quality", ascending=False).head(cfg["universe"]["watchlist_size"]))
     log.info("Größenfilter: %s Titel, Watchlist: %s", len(big), len(wl))
@@ -238,7 +241,7 @@ def run_daily() -> dict:
     calib = _load_json("calibration.json")
     if calib is None:
         raise RuntimeError("Keine Kalibrierung vorhanden – zuerst den Monatslauf starten")
-    wl = pd.read_csv(os.path.join(STATE, "watchlist.csv"))
+    wl = pd.read_csv(os.path.join(STATE, "watchlist.csv")).drop_duplicates("name", keep="first")
     fund = _load_json("fundamentals.json", {})
     kstate = _load_json("kalman_state.json", {})
     if kstate.get("_version") != calib.get("version"):
@@ -321,6 +324,9 @@ def _track_record(close: pd.DataFrame, h: int, universe: list[str]) -> dict:
     if not os.path.exists(p):
         return {"n": 0}
     log_df = pd.read_csv(p)
+    # nur Signale des aktuellen Modells (ab Version 4, Rang-Kalibrierung) auswerten
+    ver = log_df["version"] if "version" in log_df.columns else pd.Series(np.nan, index=log_df.index)
+    log_df = log_df[ver.fillna(0) >= 4]
     ent = log_df[log_df["signal"] == "Einstieg"].copy()
     # nur das erste Einstiegssignal einer Serie zählen (sonst täglich doppelt)
     ent = ent.sort_values("date").drop_duplicates(["ticker"], keep="first") if len(ent) else ent
@@ -357,6 +363,7 @@ def _append_log(res: pd.DataFrame, asof: pd.Timestamp) -> None:
     p = os.path.join(STATE, "signal_log.csv")
     cols = ["rank", "ticker", "signal", "price", "x", "mu", "excess", "sd", "cr", "r1", "r2", "w_analyst", "analyst_method"]
     out = res[cols].copy()
+    out["version"] = MODEL_VERSION
     out.insert(0, "date", str(asof.date()))
     if os.path.exists(p):
         old = pd.read_csv(p)
