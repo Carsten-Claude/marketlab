@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from . import analysts, fundamentals, kalman, signals, skill, technical
+from . import analysts, depot, fundamentals, kalman, signals, skill, technical
 from .data import get_provider
 from .universe import build_universe, region_name, region_suffix
 
@@ -251,12 +251,13 @@ def run_daily() -> dict:
     rho = calib["rho"]
     asof = pd.Timestamp.today().normalize()
 
-    close, idx_close = _prices_with_index(prov, wl["ticker"].tolist(), 2, cfg)
+    extra = [t for t in depot.open_tickers() if t not in set(wl["ticker"])]   # Depot-Titel außerhalb der Watchlist
+    close, idx_close = _prices_with_index(prov, wl["ticker"].tolist() + extra, 2, cfg)
     ind = technical.indicators(close, idx_close, cfg["technical"])
     states = technical.state_frame(ind)
 
     results = []
-    for w in wl.itertuples(index=False):
+    for w in wl.itertuples(index=False):   # nur Watchlist-Titel werden bewertet
         tk = w.ticker
         if tk not in close.columns or close[tk].dropna().empty:
             continue
@@ -316,7 +317,8 @@ def run_daily() -> dict:
     _save_json("kalman_state.json", kstate)
     _append_log(res, asof)
     track = _track_record(close, h, wl["ticker"].tolist())
-    return {"results": res, "calib": calib, "asof": asof, "cfg": cfg, "track": track, "prev": prev}
+    depots = depot.update(res, close, asof)
+    return {"results": res, "calib": calib, "asof": asof, "cfg": cfg, "track": track, "prev": prev, "depots": depots}
 
 
 def _track_record(close: pd.DataFrame, h: int, universe: list[str]) -> dict:

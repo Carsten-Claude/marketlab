@@ -12,6 +12,11 @@ if __name__ == "__main__":
     if mode == "monthly":
         pipeline.run_monthly(use_web="--no-web" not in sys.argv)
         mode = "daily"   # direkt danach Dashboard aktualisieren
+    if mode == "request":   # Klick-Buchung: Titel kommt über die Umgebungsvariable DEPOT_TITLE
+        import os
+        from marketlab import depot
+        print("Vorgemerkt:", depot.add_request(os.environ.get("DEPOT_TITLE", ""), os.environ.get("DEPOT_ISSUE")))
+        mode = "daily"
     if mode == "daily":
         run = pipeline.run_daily()
         print("Dashboard:", dashboard.render(run))

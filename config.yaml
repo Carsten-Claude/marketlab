@@ -1,6 +1,7 @@
 # MarketLab – zentrale Einstellungen
 # Alle Schwellen sind Startwerte und werden am Ergebnis justiert.
 
+repo: Carsten-Claude/marketlab   # für die Klick-Buchung ins Musterdepot
 horizon_days: 40            # Anlagehorizont: 8 Wochen = 40 Handelstage
 history_years: 5            # Kurshistorie für Kalibrierung / Rückblick-Test
 horizon_test_weeks: [8, 13, 26]   # Horizonttest im Monatslauf

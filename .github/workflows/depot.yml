@@ -1,0 +1,48 @@
+name: MarketLab Musterdepot
+
+# Buchung per Klick: Die Buttons im Dashboard öffnen ein vorausgefülltes Issue
+# „Depot: Kauf TICKER“ bzw. „Depot: Verkauf TICKER“. Nur Issues des Repository-Inhabers werden verarbeitet.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: marketlab
+  cancel-in-progress: false
+
+jobs:
+  book:
+    if: github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, 'Depot:')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Buchung vormerken und Tageslauf ausführen
+        env:
+          DEPOT_TITLE: ${{ github.event.issue.title }}
+          DEPOT_ISSUE: ${{ github.event.issue.number }}
+        run: python run.py request
+      - name: Ergebnis sichern
+        run: |
+          git config user.name "marketlab-bot"
+          git config user.email "marketlab-bot@users.noreply.github.com"
+          git add state docs
+          git commit -m "Musterdepot: Issue #${{ github.event.issue.number }}" || echo "keine Änderungen"
+          git push
+      - name: Issue mit Ergebnis schließen
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          STATUS=$(python -c "import pandas as pd,os; d=pd.read_csv('state/depot_requests.csv'); r=d[d['issue'].astype(str).str.replace(r'\.0$','',regex=True)==os.environ['ISSUE']]; print(r['status'].iloc[-1] if len(r) else 'nicht verarbeitet')" 2>/dev/null || echo "Fehler bei der Verarbeitung")
+          gh issue close "$ISSUE" --comment "Musterdepot: $STATUS. Das Dashboard ist in wenigen Minuten aktualisiert."

@@ -16,7 +16,10 @@ WEEKDAY = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag",
 def _pct(x, digits=1, sign=True):
     if x is None or (isinstance(x, float) and math.isnan(x)):
         return "–"
-    s = f"{x * 100:+.{digits}f}" if sign else f"{x * 100:.{digits}f}"
+    v = x * 100
+    if abs(v) < 0.5 * 10 ** -digits:
+        v = 0.0
+    s = f"{v:+.{digits}f}" if sign else f"{v:.{digits}f}"
     return s.replace(".", ",") + " %"
 
 
@@ -114,6 +117,62 @@ def _details(r: pd.Series) -> str:
   </div>"""
 
 
+REPO = "Carsten-Claude/marketlab"
+MANUAL_OPEN: set = set()
+
+
+def _depot_btn(tk: str) -> str:
+    from urllib.parse import quote
+    body = quote("Buchung im Musterdepot. Bitte nur unten auf „Create“ bzw. „Submit new issue“ klicken – "
+                 "die Ausführung erfolgt automatisch zum letzten Schlusskurs.")
+    if tk in MANUAL_OPEN:
+        url = f"https://github.com/{REPO}/issues/new?title={quote('Depot: Verkauf ' + tk)}&body={body}"
+        return f"<a class='dbtn on' href='{url}' target='_blank' rel='noopener'>✓ Im Musterdepot · entfernen</a>"
+    url = f"https://github.com/{REPO}/issues/new?title={quote('Depot: Kauf ' + tk)}&body={body}"
+    return f"<a class='dbtn' href='{url}' target='_blank' rel='noopener'>＋ Ins Musterdepot</a>"
+
+
+def _depot_table(d: dict, manual: bool) -> str:
+    pos = d.get("positions") or []
+    op = [p for p in pos if p["open"]]
+    cl = [p for p in pos if not p["open"]]
+    if not pos:
+        return ("<p class='muted'>Noch keine Positionen. " + ("Buchung über „＋ Ins Musterdepot“ an den Einstiegskarten."
+                if manual else "Jedes neue Einstiegssignal wird automatisch aufgenommen.") + "</p>")
+    sig_lbl = {"Einstieg": "Einstieg", "Ausstieg": "<span style='color:var(--crit)'>Ausstieg</span>", "Halten": "Halten"}
+    head = ("<tr><th>Titel</th><th class='num'>seit</th><th class='num'>Einstand</th><th class='num'>Kurs</th>"
+            "<th class='num'>Rendite</th><th class='num'>ggü. Watchlist</th><th class='hide-s'>Signal heute</th>"
+            + ("<th></th>" if manual else "") + "</tr>")
+    rows = "".join(
+        f"<tr><td><b>{_e(_nm(p['name']))}</b><br><span class='muted small'>{_e(p['ticker'])}</span></td>"
+        f"<td class='num'>{pd.Timestamp(p['entry_date']).strftime('%d.%m.')}<br><span class='muted small'>{p['days']} Tage</span></td>"
+        f"<td class='num'>{_num(p['entry_price'])}</td><td class='num'>{_num(p['price'])}</td>"
+        f"<td class='num'><b>{_pct(p['ret'])}</b></td><td class='num'>{_pct(p['excess'])}</td>"
+        f"<td class='hide-s'>{sig_lbl.get(p['signal_now'], _e(p['signal_now']))}</td>"
+        + (f"<td>{_depot_btn(p['ticker'])}</td>" if manual else "") + "</tr>" for p in op)
+    out = f"<table class='dt'><thead>{head}</thead><tbody>{rows or '<tr><td colspan=8 class=muted>Keine offenen Positionen.</td></tr>'}</tbody></table>"
+    if cl:
+        crow = "".join(
+            f"<tr><td><b>{_e(_nm(p['name']))}</b><br><span class='muted small'>{_e(p['ticker'])}</span></td>"
+            f"<td class='num'>{pd.Timestamp(p['entry_date']).strftime('%d.%m.')}–{pd.Timestamp(p['exit_date']).strftime('%d.%m.')}</td>"
+            f"<td class='num'><b>{_pct(p['ret'])}</b></td><td class='num'>{_pct(p['excess'])}</td>"
+            f"<td class='hide-s small'>{_e(p['exit_reason'])}</td></tr>" for p in cl[::-1])
+        out += (f"<h4>Geschlossene Positionen ({len(cl)})</h4><table class='dt'><thead><tr><th>Titel</th><th class='num'>Zeitraum</th>"
+                f"<th class='num'>Rendite</th><th class='num'>ggü. Watchlist</th><th class='hide-s'>Grund</th></tr></thead><tbody>{crow}</tbody></table>")
+    return out
+
+
+def _depot_tile(title: str, d: dict) -> str:
+    st = d.get("all")
+    if not st:
+        txt = "noch keine Positionen"
+    else:
+        txt = (f"Ø ggü. Watchlist <b>{_pct(st['excess'])}</b> · besser als Watchlist in {_pct(st['hit'], 0, False)} · "
+               f"Ø Rendite {_pct(st['ret'])}")
+    return (f"<div class='dtile'><div class='h'>{title}</div><div class='v'>{d.get('n_open', 0)} offen · "
+            f"{d.get('n_closed', 0)} geschlossen</div><div class='small muted'>{txt}</div></div>")
+
+
 def _card(r: pd.Series, kind: str) -> str:
     """kind: new_in | active | new_out | ended"""
     sig = {"new_in": "Einstieg", "active": "Einstieg", "new_out": "Ausstieg", "ended": "Halten"}[kind]
@@ -126,9 +185,10 @@ def _card(r: pd.Series, kind: str) -> str:
     else:
         kv = f"<span>Kurs <b>{_num(r['price'])}</b> <span class='muted'>{_e(r['currency'] or '')}</span></span>"
     why = "; ".join(r["reasons"])
+    btn = f"<div class='dline'>{_depot_btn(r['ticker'])}</div>" if sig == "Einstieg" else ""
     return (f"<div class='bcard {cls}'><div class='top'><div><b>{_e(_nm(r['name']))}</b>{tag}<br>"
             f"<span class='muted small'>{_e(r['ticker'])} · {_e(r['region'])}</span></div>{BADGE[sig]}</div>"
-            f"<div class='kv'>{kv}</div><div class='why'>{_e(why)}</div>"
+            f"<div class='kv'>{kv}</div><div class='why'>{_e(why)}</div>{btn}"
             f"<details class='more'><summary>Details</summary>{_details(r)}</details></div>")
 
 
@@ -240,6 +300,21 @@ def render(run: dict, path: str | None = None) -> str:
                    f'Analysten-Kalibrierung vom {_e(calib["analysts_reused"])} weiterverwendet.</div>')
     elif not ca.get("n"):
         banner += '<div class="warn">Keine Analysten-Kalibrierung vorhanden – Analystenquelle eingeschränkt.</div>'
+
+    global REPO, MANUAL_OPEN
+    REPO = cfg.get("repo", REPO)
+    depots = run.get("depots") or {"signal": {}, "manual": {}}
+    MANUAL_OPEN = {p["ticker"] for p in (depots["manual"].get("positions") or []) if p["open"]}
+    depot_tiles = (f"<div class='label'>Musterdepots</div><div class='dtiles'>{_depot_tile('Signal-Depot (automatisch)', depots['signal'])}"
+                   f"{_depot_tile('Mein Depot (manuell)', depots['manual'])}</div>")
+    depot_secs = (f"<details class='sec'><summary>Signal-Depot – {depots['signal'].get('n_open', 0)} offen</summary><div class='secin'>"
+                  f"<p class='muted small'>Jedes neue Einstiegssignal wird zum Schlusskurs des Signaltags aufgenommen und bei "
+                  f"Ausstiegssignal, Stopp, Signalende oder Verlassen der Watchlist ausgebucht. Gleiche Beträge je Position, ohne Gebühren. "
+                  f"„ggü. Watchlist“ = Rendite minus Ø Rendite aller Watchlist-Titel im selben Zeitraum.</p>"
+                  f"{_depot_table(depots['signal'], False)}</div></details>"
+                  f"<details class='sec'><summary>Mein Depot – {depots['manual'].get('n_open', 0)} offen</summary><div class='secin'>"
+                  f"<p class='muted small'>Deine Auswahl per Klick. Ausführung zum letzten Schlusskurs; die Buchung erscheint etwa "
+                  f"5 Minuten nach dem Bestätigen auf GitHub.</p>{_depot_table(depots['manual'], True)}</div></details>")
 
     # ---- Tagesbrief: Veränderungen gegenüber dem Vortag
     prev = run.get("prev") or {}
@@ -368,6 +443,14 @@ td {{ padding:8px; border-bottom:1px solid var(--grid); vertical-align:top; font
 .warn {{ background:var(--warnbg); border-radius:8px; padding:10px 14px; margin:14px 0 0; font-weight:500; }}
 @media (max-width:620px) {{ .lhdr, details.lrow > summary {{ grid-template-columns:1fr 100px 64px; }} .hide-s {{ display:none; }}
   .brief {{ font-size:17px; }} }}
+.dline {{ margin-top:10px; }}
+.dbtn {{ display:inline-block; font-size:13px; font-weight:600; color:var(--series); border:1px solid var(--series); border-radius:6px;
+  padding:4px 10px; text-decoration:none; white-space:nowrap; }}
+.dbtn.on {{ color:var(--goodtext); border-color:var(--good); font-weight:500; }}
+.dtiles {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:12px; }}
+.dtile {{ background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:12px 16px; }}
+.dtile .h {{ font-size:13px; color:var(--ink2); font-weight:600; }} .dtile .v {{ font:600 18px/1.3 "Source Serif 4", Georgia, serif; margin:2px 0; }}
+.dt td {{ vertical-align:middle; }} .secin h4 {{ margin:16px 0 6px; font-size:13px; }}
 footer {{ margin-top:32px; color:var(--muted); font-size:12px; }}
 </style></head><body><div class="wrap">
 <h1>MarketLab</h1>
@@ -376,8 +459,10 @@ footer {{ margin-top:32px; color:var(--muted); font-size:12px; }}
 <p class="brief">{brief}</p>
 {action_html}
 {active_html}
+{depot_tiles}
 
 <div class="label">Mehr</div>
+{depot_secs}
 <details class="sec"><summary>Beobachtungsliste – Top {len(top)}</summary><div class="secin">
   <div class="lhdr"><span>Titel · antippen für Details</span><span>Signal</span><span class="num">Vorsprung</span><span class="num hide-s">Stopp</span></div>
   {watch_rows}
