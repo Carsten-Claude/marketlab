@@ -20,442 +20,336 @@
   --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10); --series:#3987e5;
   --goodtext:#0ca30c; --warnbg:#3a2e10; }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--page); color:var(--ink); font:14px/1.5 Inter, system-ui, sans-serif; }
-.wrap { max-width:1320px; margin:0 auto; padding:32px 16px 64px; }
-header h1 { font:600 30px/1.1 "Source Serif 4", Georgia, serif; margin:0 0 4px; letter-spacing:-.01em; }
-header .sub { color:var(--ink2); margin:0; }
-.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:24px 0 32px; }
-.kpi { background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:14px 16px; }
-.kpi .v { font:600 26px/1.1 "Source Serif 4", Georgia, serif; }
-.kpi .l { color:var(--ink2); font-size:12.5px; margin-top:2px; }
-h2 { font:600 20px/1.2 "Source Serif 4", Georgia, serif; margin:36px 0 6px; }
-h2 + p { color:var(--ink2); margin:0 0 12px; max-width:860px; }
-.card { background:var(--surface); border:1px solid var(--ring); border-radius:10px; overflow-x:auto; }
-table { border-collapse:collapse; width:100%; }
-th { text-align:left; font-weight:500; color:var(--muted); font-size:12px; padding:10px 10px; border-bottom:1px solid var(--axis); white-space:nowrap; }
-td { padding:9px 10px; border-bottom:1px solid var(--grid); vertical-align:middle; }
-.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.strong { font-weight:600; }
-.rank { color:var(--muted); }
-.title .nm { display:block; font-weight:500; min-width:150px; }
-.title .tk { display:block; color:var(--muted); font-size:12px; }
-tr.main td { border-bottom:none; }
-tr.det td { padding-top:0; }
-details summary { cursor:pointer; color:var(--ink2); font-size:12.5px; padding:2px 0 6px; }
-.detgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; padding:6px 0 12px; }
-.detgrid h4 { margin:6px 0 4px; font-size:12.5px; color:var(--ink2); font-weight:600; }
-.detgrid p, .detgrid ul { margin:0 0 8px; color:var(--ink); font-size:13px; }
-.detgrid ul { padding-left:18px; }
-.mini th, .mini td { padding:4px 6px; font-size:12.5px; }
-.muted { color:var(--muted); }
-.badge { display:inline-flex; align-items:center; gap:6px; font-weight:500; font-size:13px; white-space:nowrap; }
+body { margin:0; background:var(--page); color:var(--ink); font:15px/1.5 Inter, system-ui, sans-serif; }
+.wrap { max-width:1000px; margin:0 auto; padding:28px 16px 56px; }
+h1 { font:600 28px/1.1 "Source Serif 4", Georgia, serif; margin:0; }
+.sub { color:var(--ink2); margin:4px 0 0; font-size:14px; }
+.brief { font:500 19px/1.45 "Source Serif 4", Georgia, serif; margin:18px 0 4px; max-width:780px; }
+.label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin:22px 0 8px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:12px; align-items:start; }
+.bcard { background:var(--surface); border:1px solid var(--ring); border-left:4px solid var(--good); border-radius:10px; padding:14px 16px; }
+.bcard.r { border-left-color:var(--crit); } .bcard.n { border-left-color:var(--axis); }
+.bcard .top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+.kv { display:flex; gap:16px; flex-wrap:wrap; font-size:14px; color:var(--ink2); margin:10px 0 4px; }
+.kv b { color:var(--ink); }
+.why { font-size:13px; color:var(--muted); }
+.small { font-size:12px; }
+.new { font-size:11px; font-weight:600; color:var(--series); border:1px solid var(--series); border-radius:4px; padding:0 5px; margin-left:6px; white-space:nowrap; }
+.new.grey { color:var(--ink2); border-color:var(--axis); }
+.badge { display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:13px; white-space:nowrap; }
 .badge svg { width:10px; height:10px; }
 .badge.good { color:var(--goodtext); } .badge.good svg { fill:var(--good); }
 .badge.crit { color:var(--crit); } .badge.crit svg { fill:var(--crit); }
-.badge.hold { color:var(--ink2); } .badge.hold svg { fill:var(--muted); }
-.tag { font-size:10.5px; padding:1px 5px; border-radius:4px; border:1px solid var(--ring); color:var(--ink2); margin-left:4px; }
-.tag.mv { border-color:var(--series); color:var(--series); }
-.crval { display:inline-block; min-width:44px; }
-.crbar { position:relative; display:inline-block; width:70px; height:8px; vertical-align:middle; margin-left:6px; background:var(--grid); border-radius:4px; }
-.crbar .mid { position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--axis); }
-.crbar .fill { position:absolute; top:0; bottom:0; background:var(--series); border-radius:4px; }
-.two { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; }
-.two .card { padding:4px 0; }
-.prose { padding:14px 16px; color:var(--ink); }
-.warn { background:var(--warnbg); border-radius:8px; padding:10px 14px; margin:16px 0 0; font-weight:500; }
-@media (max-width:760px) { .opt { display:none; } .crbar { width:40px; } td, th { padding-left:6px; padding-right:6px; } .detgrid { grid-template-columns:1fr; } .wrap { padding-top:20px; } }
-footer { margin-top:40px; color:var(--muted); font-size:12px; max-width:860px; }
+.badge.hold { color:var(--ink2); font-weight:500; } .badge.hold svg { fill:var(--muted); }
+details.more > summary { cursor:pointer; color:var(--ink2); font-size:12.5px; margin-top:8px; }
+details.sec { background:var(--surface); border:1px solid var(--ring); border-radius:10px; margin:12px 0; }
+details.sec > summary { cursor:pointer; padding:13px 16px; font-weight:600; list-style:none; display:flex; justify-content:space-between; }
+details.sec > summary::-webkit-details-marker { display:none; }
+details.sec > summary::after { content:"＋"; color:var(--muted); } details.sec[open] > summary::after { content:"－"; }
+.secin { padding:0 16px 14px; }
+.lhdr, details.lrow > summary { display:grid; grid-template-columns:1fr 130px 90px 90px; gap:8px; align-items:center; }
+.lhdr { font-size:12px; color:var(--muted); padding:6px 0; border-bottom:1px solid var(--axis); }
+details.lrow { border-bottom:1px solid var(--grid); }
+details.lrow > summary { cursor:pointer; list-style:none; padding:10px 0; }
+details.lrow > summary::-webkit-details-marker { display:none; }
+.lin { padding:0 0 10px; }
+.detgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; padding:8px 0 4px; }
+.detgrid h4 { margin:6px 0 4px; font-size:12.5px; color:var(--ink2); font-weight:600; }
+.detgrid p, .detgrid ul { margin:0 0 8px; font-size:13px; } .detgrid ul { padding-left:18px; }
+table { border-collapse:collapse; width:100%; }
+th { text-align:left; font-weight:500; color:var(--muted); font-size:12px; padding:8px; border-bottom:1px solid var(--axis); }
+td { padding:8px; border-bottom:1px solid var(--grid); vertical-align:top; font-size:14px; }
+.mini th, .mini td { padding:4px 6px; font-size:12.5px; }
+.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.muted { color:var(--muted); }
+.title .nm { display:block; font-weight:500; } .title .tk { display:block; color:var(--muted); font-size:12px; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:4px 0 16px; }
+.kpi { border:1px solid var(--ring); border-radius:8px; padding:10px 12px; }
+.kpi .v { font:600 20px/1.1 "Source Serif 4", Georgia, serif; } .kpi .l { color:var(--ink2); font-size:12px; }
+.gq h4 { margin:16px 0 6px; font-size:13px; } .gq p { font-size:13.5px; color:var(--ink2); }
+.warn { background:var(--warnbg); border-radius:8px; padding:10px 14px; margin:14px 0 0; font-weight:500; }
+@media (max-width:620px) { .lhdr, details.lrow > summary { grid-template-columns:1fr 100px 64px; } .hide-s { display:none; }
+  .brief { font-size:17px; } }
+footer { margin-top:32px; color:var(--muted); font-size:12px; }
 </style></head><body><div class="wrap">
-<header>
-  <h1>MarketLab</h1>
-  <p class="sub">Qualitätsaktien Europa · USA · Asien — Stand Freitag, 23.10.2026 · Horizont 8 Wochen</p>
-  
-</header>
+<h1>MarketLab</h1>
+<p class="sub">Tagesbrief Freitag, 23.10.2026 · Horizont 8 Wochen</p>
 
-<section class="kpis">
-  <div class="kpi"><div class="v">119</div><div class="l">Titel in der Watchlist</div></div>
-  <div class="kpi"><div class="v">2</div><div class="l">Einstiegssignale</div></div>
-  <div class="kpi"><div class="v">16</div><div class="l">Ausstiegssignale</div></div>
-  <div class="kpi"><div class="v">79</div><div class="l">Titel mit Minimum-Varianz-Analystenziel</div></div>
-  <div class="kpi"><div class="v">+2,8 %</div><div class="l">Watchlist-Median r̂ (8 Wochen, Bezugswert)</div></div>
-  <div class="kpi"><div class="v">12,7 %</div><div class="l">Kursrauschen σε (8 Wochen, geschätzt)</div></div>
-</section>
-
-<h2>Top 10 nach Chance/Risiko</h2>
-<p>Rangkriterium ist der Vorsprung je Schätzfehler: Kalman-fusionierte erwartete 8-Wochen-Rendite r̂ abzüglich des Watchlist-Medians (+2,8 %), geteilt durch σ. Die gemeinsame Marktdrift zählt damit nicht als Signal. Einstiegssignale stehen vorn, danach die übrigen Titel nach Chance/Risiko; höchstens 5 US-Titel. Titel mit aktivem Ausstiegssignal stehen in der Liste darunter.
-r₁ = Analystenquelle (MV = Minimum-Varianz der Top-5-Häuser, Konsens = Rückfall), r₂ = Chartquelle.
-Erwartete Rendite r̂ und Gewichtung der Quellen stehen in den Details.</p>
-<div class="card"><table>
-<thead><tr><th class="num opt">#</th><th>Titel</th><th>Signal</th><th class="num">Chance/Risiko</th>
-<th class="num">Vorsprung</th><th class="num opt">Schätzfehler σ</th><th class="num opt">r₁ Analysten</th><th class="num opt">r₂ Technik</th>
-<th class="num opt">Kurs</th><th class="num opt">Stopp</th><th class="num opt">Fair Value</th>
-<th class="num opt">Qualität</th></tr></thead>
-<tbody>
-<tr class="main">
-  <td class="num rank opt">1</td>
-  <td class="title"><span class="nm">Arista Networks, Inc.</span><span class="tk">ANET · USA</span></td>
-  <td><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></td>
-  <td class="num"><span class="crval">+1,41</span><span class="crbar" title="Chance/Risiko +1,41"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
-  <td class="num strong">+0,7 %</td>
-  <td class="num opt">± 0,5 %</td>
-  <td class="num opt">+3,6 % <span class="tag mv">MV · F5</span></td>
-  <td class="num opt">+3,0 %</td>
-  <td class="num opt">171,07</td>
-  <td class="num opt">142,31</td>
-  <td class="num opt">+4 %</td>
-  <td class="num opt">100</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
-    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,41 über +1,00, Aufwärtstrend intakt</li></ul>
-      <h4>Technik</h4><p>Kurs 171,07 USD · Stopp 142,31 · Qualität 100<br>Trend auf, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv · Stichprobe 1,714 Fälle<br>
-      RSI 32 · %B 0,06 · GD 50 196,29 · GD 200 164,72 ·
+<p class="brief"><b>Drei neue Einstiegssignale</b>: Arista Networks, Inc., Cisco Systems, Inc. und Monster Beverage Corporation. <b>Vier Titel neu im Ausstieg</b>: Amphenol Corporation, NetEase, Atlas Copco AB ser. A und Interactive Brokers Group, Inc..</p>
+<div class="label">Heute neu</div><div class="cards"><div class='bcard g'><div class='top'><div><b>Arista Networks, Inc.</b><span class='new'>neu</span><br><span class='muted small'>ANET · USA</span></div><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></div><div class='kv'><span>Vorsprung <b>+0,7 %</b></span><span>Stopp <b>145,12</b></span><span>Kurs <b>174,47</b> <span class='muted'>USD</span></span></div><div class='why'>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,43 über +1,00, Aufwärtstrend intakt</div><details class='more'><summary>Details</summary><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,43 über +1,00, Aufwärtstrend intakt</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,7 % ± 0,5 % · Chance/Risiko +1,43<br>
+      Kurs 174,47 USD · Stopp 145,12 · Qualität 100</p>
+      <h4>Technik</h4><p>Trend auf, RSI 35–50, Bollinger unten, rel. Momentum 12-1 positiv<br>RSI 36 · GD 50 196,36 · GD 200 164,73 ·
       Trend auf · rel. Momentum 12-1 +33,1 %</p></div>
-    <div><h4>Analysten (Minimum-Varianz)</h4>
+    <div><h4>Analysten (Minimum-Varianz · F5)</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
       <tbody><tr><td>Barclays</td><td class='num'>289,00</td><td class='num'>49 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>250,00</td><td class='num'>21 %</td></tr><tr><td>Wells Fargo</td><td class='num'>255,00</td><td class='num'>10 %</td></tr><tr><td>UBS</td><td class='num'>259,00</td><td class='num'>10 %</td></tr><tr><td>Morgan Stanley</td><td class='num'>220,00</td><td class='num'>10 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,5 % · r₂ +3,0 % ± 6,5 %<br>
-      Fusion: r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,1 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value 177,12 USD (+4 % zum Kurs)<br>
-      Gewinnwachstum 12M +32,5 % · Revision 30T +0,7 % · 90T +16,9 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>
-<tr class="main">
-  <td class="num rank opt">2</td>
-  <td class="title"><span class="nm">Cisco Systems, Inc.</span><span class="tk">CSCO · USA</span></td>
-  <td><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></td>
-  <td class="num"><span class="crval">+1,39</span><span class="crbar" title="Chance/Risiko +1,39"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
-  <td class="num strong">+0,7 %</td>
-  <td class="num opt">± 0,5 %</td>
-  <td class="num opt">+3,6 % <span class="tag mv">MV · F5</span></td>
-  <td class="num opt">+3,1 %</td>
-  <td class="num opt">104,89</td>
-  <td class="num opt">93,25</td>
-  <td class="num opt">-28 %</td>
-  <td class="num opt">80</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
-    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,39 über +1,00, Aufwärtstrend intakt</li></ul>
-      <h4>Technik</h4><p>Kurs 104,89 USD · Stopp 93,25 · Qualität 80<br>Trend auf, RSI 35–50, Bollinger unten, rel. Momentum 12-1 positiv · Stichprobe 6,423 Fälle<br>
-      RSI 38 · %B 0,19 · GD 50 109,86 · GD 200 100,49 ·
+      <p>Fair Value 177,12 USD (+2 % zum Kurs)<br>Gewinnwachstum 12M +32,5 % · Revision 30T +0,7 % · 90T +16,9 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></details></div><div class='bcard g'><div class='top'><div><b>Cisco Systems, Inc.</b><span class='new'>neu</span><br><span class='muted small'>CSCO · USA</span></div><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></div><div class='kv'><span>Vorsprung <b>+0,7 %</b></span><span>Stopp <b>94,28</b></span><span>Kurs <b>106,04</b> <span class='muted'>USD</span></span></div><div class='why'>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,40 über +1,00, Aufwärtstrend intakt</div><details class='more'><summary>Details</summary><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,40 über +1,00, Aufwärtstrend intakt</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,7 % ± 0,5 % · Chance/Risiko +1,40<br>
+      Kurs 106,04 USD · Stopp 94,28 · Qualität 80</p>
+      <h4>Technik</h4><p>Trend auf, RSI 35–50, Bollinger Mitte, rel. Momentum 12-1 positiv<br>RSI 41 · GD 50 109,88 · GD 200 100,49 ·
       Trend auf · rel. Momentum 12-1 +37,2 %</p></div>
-    <div><h4>Analysten (Minimum-Varianz)</h4>
+    <div><h4>Analysten (Minimum-Varianz · F5)</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
       <tbody><tr><td>HSBC</td><td class='num'>120,00</td><td class='num'>60 %</td></tr><tr><td>Barclays</td><td class='num'>123,00</td><td class='num'>10 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>150,00</td><td class='num'>10 %</td></tr><tr><td>Wells Fargo</td><td class='num'>150,00</td><td class='num'>10 %</td></tr><tr><td>UBS</td><td class='num'>138,00</td><td class='num'>10 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,5 % · r₂ +3,1 % ± 6,5 %<br>
-      Fusion: r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,1 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value 75,77 USD (-28 % zum Kurs)<br>
-      Gewinnwachstum 12M +14,0 % · Revision 30T +0,4 % · 90T +6,5 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>
-<tr class="main">
-  <td class="num rank opt">3</td>
-  <td class="title"><span class="nm">Vertiv Holdings, LLC</span><span class="tk">VRT · USA</span></td>
-  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
-  <td class="num"><span class="crval">+1,51</span><span class="crbar" title="Chance/Risiko +1,51"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
-  <td class="num strong">+0,8 %</td>
-  <td class="num opt">± 0,5 %</td>
-  <td class="num opt">+3,6 % <span class="tag mv">MV · F5</span></td>
-  <td class="num opt">+3,5 %</td>
-  <td class="num opt">195,59</td>
-  <td class="num opt">155,22</td>
-  <td class="num opt"><span class="muted" title="Gewinne zu instabil für eine KGV-basierte Bewertung">n. b.</span></td>
-  <td class="num opt">83</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
+      <p>Fair Value 75,77 USD (-29 % zum Kurs)<br>Gewinnwachstum 12M +14,0 % · Revision 30T +0,4 % · 90T +6,5 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></details></div><div class='bcard g'><div class='top'><div><b>Monster Beverage Corporation</b><span class='new'>neu</span><br><span class='muted small'>MNST · USA</span></div><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span></div><div class='kv'><span>Vorsprung <b>+0,7 %</b></span><span>Stopp <b>42,80</b></span><span>Kurs <b>46,68</b> <span class='muted'>USD</span></span></div><div class='why'>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,37 über +1,00, Aufwärtstrend intakt</div><details class='more'><summary>Details</summary><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,37 über +1,00, Aufwärtstrend intakt</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,7 % ± 0,5 % · Chance/Risiko +1,37<br>
+      Kurs 46,68 USD · Stopp 42,80 · Qualität 93</p>
+      <h4>Technik</h4><p>Trend auf, RSI 50–70, Bollinger oben, rel. Momentum 12-1 positiv<br>RSI 63 · GD 50 44,78 · GD 200 43,03 ·
+      Trend auf · rel. Momentum 12-1 +12,4 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz · F5)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>BMO Capital</td><td class='num'>95,00</td><td class='num'>60 %</td></tr><tr><td>RBC Capital</td><td class='num'>100,00</td><td class='num'>10 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>105,00</td><td class='num'>10 %</td></tr><tr><td>Wells Fargo</td><td class='num'>48,00</td><td class='num'>10 %</td></tr><tr><td>UBS</td><td class='num'>105,00</td><td class='num'>10 %</td></tr></tbody></table>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +2,9 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 40,50 USD (-13 % zum Kurs)<br>Gewinnwachstum 12M +16,0 % · Revision 30T -0,3 % · 90T +1,2 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></details></div><div class='bcard r'><div class='top'><div><b>Amphenol Corporation</b><span class='new'>neu</span><br><span class='muted small'>APH · USA</span></div><span class="badge crit"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9 1 2h8z"/></svg>Ausstieg</span></div><div class='kv'><span>Kurs <b>73,96</b> <span class='muted'>USD</span></span></div><div class='why'>Schlusskurs 2 Tage in Folge unter GD 200</div><details class='more'><summary>Details</summary><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Schlusskurs 2 Tage in Folge unter GD 200</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,7 % ± 0,5 % · Chance/Risiko +1,31<br>
+      Kurs 73,96 USD · Stopp 63,25 · Qualität 83</p>
+      <h4>Technik</h4><p>Trend gemischt, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv<br>RSI 32 · GD 50 81,48 · GD 200 75,12 ·
+      Trend gemischt · rel. Momentum 12-1 +7,1 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz · F5)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>BNP Paribas</td><td class='num'>110,00</td><td class='num'>60 %</td></tr><tr><td>Barclays</td><td class='num'>100,00</td><td class='num'>10 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>100,00</td><td class='num'>10 %</td></tr><tr><td>UBS</td><td class='num'>105,00</td><td class='num'>10 %</td></tr><tr><td>TD Cowen</td><td class='num'>90,00</td><td class='num'>10 %</td></tr></tbody></table>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,4 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 90,41 USD (+22 % zum Kurs)<br>Gewinnwachstum 12M +42,5 % · Revision 30T +1,9 % · 90T +14,2 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></details></div><div class='bcard r'><div class='top'><div><b>NetEase</b><span class='new'>neu</span><br><span class='muted small'>9999.HK · Hongkong</span></div><span class="badge crit"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9 1 2h8z"/></svg>Ausstieg</span></div><div class='kv'><span>Kurs <b>183,00</b> <span class='muted'>HKD</span></span></div><div class='why'>Schlusskurs 2 Tage in Folge unter GD 200</div><details class='more'><summary>Details</summary><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Schlusskurs 2 Tage in Folge unter GD 200</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,1 % ± 0,7 % · Chance/Risiko +0,12<br>
+      Kurs 183,00 HKD · Stopp 163,56 · Qualität 84</p>
+      <h4>Technik</h4><p>Trend gemischt, RSI 35–50, Bollinger unten, rel. Momentum 12-1 negativ<br>RSI 40 · GD 50 189,89 · GD 200 189,70 ·
+      Trend gemischt · rel. Momentum 12-1 -9,4 %</p></div>
+    <div><h4>Analysten (Konsens-Rückfall · F5)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>Konsens (23 Analysten)</td><td class='num'>253,85</td><td class='num'>100 %</td></tr></tbody></table>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +2,9 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +2,9 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 206,49 HKD (+13 % zum Kurs)<br>Gewinnwachstum 12M +10,9 % · Revision 30T -0,2 % · 90T +0,0 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></details></div><div class='bcard r'><div class='top'><div><b>Atlas Copco AB ser. A</b><span class='new'>neu</span><br><span class='muted small'>ATCO-A.ST · Schweden</span></div><span class="badge crit"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9 1 2h8z"/></svg>Ausstieg</span></div><div class='kv'><span>Kurs <b>176,00</b> <span class='muted'>SEK</span></span></div><div class='why'>Schlusskurs 2 Tage in Folge unter GD 200</div><details class='more'><summary>Details</summary><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Schlusskurs 2 Tage in Folge unter GD 200</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung -0,0 % ± 0,3 % · Chance/Risiko -0,03<br>
+      Kurs 176,00 SEK · Stopp 159,49 · Qualität 77</p>
+      <h4>Technik</h4><p>Trend gemischt, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv<br>RSI 28 · GD 50 201,21 · GD 200 187,35 ·
+      Trend gemischt · rel. Momentum 12-1 +11,0 %</p></div>
+    <div><h4>Analysten (Konsens-Rückfall · F4)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>Konsens (20 Analysten)</td><td class='num'>232,50</td><td class='num'>100 %</td></tr></tbody></table>
+      <p>r₁ Analysten +2,8 % · r₂ Technik +3,4 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +2,8 % ± 0,3 % · inkl. Kursrauschen ± 12,7 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 179,87 SEK (+2 % zum Kurs)<br>Gewinnwachstum 12M +17,4 % · Revision 30T +3,3 % · 90T +4,7 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></details></div><div class='bcard r'><div class='top'><div><b>Interactive Brokers Group, Inc.</b><span class='new'>neu</span><br><span class='muted small'>IBKR · USA</span></div><span class="badge crit"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9 1 2h8z"/></svg>Ausstieg</span></div><div class='kv'><span>Kurs <b>81,60</b> <span class='muted'>USD</span></span></div><div class='why'>Schlusskurs 2 Tage in Folge unter GD 200</div><details class='more'><summary>Details</summary><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Schlusskurs 2 Tage in Folge unter GD 200</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung -0,0 % ± 0,2 % · Chance/Risiko -0,06<br>
+      Kurs 81,60 USD · Stopp 71,54 · Qualität 79</p>
+      <h4>Technik</h4><p>Trend gemischt, RSI 35–50, Bollinger unten, rel. Momentum 12-1 positiv<br>RSI 39 · GD 50 89,46 · GD 200 83,00 ·
+      Trend gemischt · rel. Momentum 12-1 +12,6 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz · F4)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>BMO Capital</td><td class='num'>100,00</td><td class='num'>60 %</td></tr><tr><td>Barclays</td><td class='num'>117,00</td><td class='num'>10 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>100,00</td><td class='num'>10 %</td></tr><tr><td>Wells Fargo</td><td class='num'>102,00</td><td class='num'>10 %</td></tr><tr><td>UBS</td><td class='num'>101,00</td><td class='num'>10 %</td></tr></tbody></table>
+      <p>r₁ Analysten +2,8 % · r₂ Technik +3,5 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +2,8 % ± 0,2 % · inkl. Kursrauschen ± 12,7 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 74,10 USD (-9 % zum Kurs)<br>Gewinnwachstum 12M +23,2 % · Revision 30T +4,6 % · 90T +7,8 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></details></div></div>
+
+
+<div class="label">Mehr</div>
+<details class="sec"><summary>Beobachtungsliste – Top 10</summary><div class="secin">
+  <div class="lhdr"><span>Titel · antippen für Details</span><span>Signal</span><span class="num">Vorsprung</span><span class="num hide-s">Stopp</span></div>
+  <details class='lrow'><summary><span class='t'><b>Arista Networks, Inc.</b><span class=new>neu</span><br><span class='muted small'>ANET · USA</span></span><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span><span class='num'>+0,7 %</span><span class='num hide-s'>145,12</span></summary><div class='lin'><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,43 über +1,00, Aufwärtstrend intakt</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,7 % ± 0,5 % · Chance/Risiko +1,43<br>
+      Kurs 174,47 USD · Stopp 145,12 · Qualität 100</p>
+      <h4>Technik</h4><p>Trend auf, RSI 35–50, Bollinger unten, rel. Momentum 12-1 positiv<br>RSI 36 · GD 50 196,36 · GD 200 164,73 ·
+      Trend auf · rel. Momentum 12-1 +33,1 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz · F5)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>Barclays</td><td class='num'>289,00</td><td class='num'>49 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>250,00</td><td class='num'>21 %</td></tr><tr><td>Wells Fargo</td><td class='num'>255,00</td><td class='num'>10 %</td></tr><tr><td>UBS</td><td class='num'>259,00</td><td class='num'>10 %</td></tr><tr><td>Morgan Stanley</td><td class='num'>220,00</td><td class='num'>10 %</td></tr></tbody></table>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,1 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 177,12 USD (+2 % zum Kurs)<br>Gewinnwachstum 12M +32,5 % · Revision 30T +0,7 % · 90T +16,9 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details><details class='lrow'><summary><span class='t'><b>Cisco Systems, Inc.</b><span class=new>neu</span><br><span class='muted small'>CSCO · USA</span></span><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span><span class='num'>+0,7 %</span><span class='num hide-s'>94,28</span></summary><div class='lin'><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,40 über +1,00, Aufwärtstrend intakt</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,7 % ± 0,5 % · Chance/Risiko +1,40<br>
+      Kurs 106,04 USD · Stopp 94,28 · Qualität 80</p>
+      <h4>Technik</h4><p>Trend auf, RSI 35–50, Bollinger Mitte, rel. Momentum 12-1 positiv<br>RSI 41 · GD 50 109,88 · GD 200 100,49 ·
+      Trend auf · rel. Momentum 12-1 +37,2 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz · F5)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>HSBC</td><td class='num'>120,00</td><td class='num'>60 %</td></tr><tr><td>Barclays</td><td class='num'>123,00</td><td class='num'>10 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>150,00</td><td class='num'>10 %</td></tr><tr><td>Wells Fargo</td><td class='num'>150,00</td><td class='num'>10 %</td></tr><tr><td>UBS</td><td class='num'>138,00</td><td class='num'>10 %</td></tr></tbody></table>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,1 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 75,77 USD (-29 % zum Kurs)<br>Gewinnwachstum 12M +14,0 % · Revision 30T +0,4 % · 90T +6,5 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details><details class='lrow'><summary><span class='t'><b>Monster Beverage Corporation</b><span class=new>neu</span><br><span class='muted small'>MNST · USA</span></span><span class="badge good"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9 8H1z"/></svg>Einstieg</span><span class='num'>+0,7 %</span><span class='num hide-s'>42,80</span></summary><div class='lin'><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +1,37 über +1,00, Aufwärtstrend intakt</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,7 % ± 0,5 % · Chance/Risiko +1,37<br>
+      Kurs 46,68 USD · Stopp 42,80 · Qualität 93</p>
+      <h4>Technik</h4><p>Trend auf, RSI 50–70, Bollinger oben, rel. Momentum 12-1 positiv<br>RSI 63 · GD 50 44,78 · GD 200 43,03 ·
+      Trend auf · rel. Momentum 12-1 +12,4 %</p></div>
+    <div><h4>Analysten (Minimum-Varianz · F5)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>BMO Capital</td><td class='num'>95,00</td><td class='num'>60 %</td></tr><tr><td>RBC Capital</td><td class='num'>100,00</td><td class='num'>10 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>105,00</td><td class='num'>10 %</td></tr><tr><td>Wells Fargo</td><td class='num'>48,00</td><td class='num'>10 %</td></tr><tr><td>UBS</td><td class='num'>105,00</td><td class='num'>10 %</td></tr></tbody></table>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +2,9 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 40,50 USD (-13 % zum Kurs)<br>Gewinnwachstum 12M +16,0 % · Revision 30T -0,3 % · 90T +1,2 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details><details class='lrow'><summary><span class='t'><b>Vertiv Holdings, LLC</b><br><span class='muted small'>VRT · USA</span></span><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Beobachten</span><span class='num'>+0,8 %</span><span class='num hide-s'>154,62</span></summary><div class='lin'><div class="detgrid">
     <div><h4>Signal</h4><ul><li>Vorsprung ausreichend, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
-      <h4>Technik</h4><p>Kurs 195,59 USD · Stopp 155,22 · Qualität 83<br>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv · Stichprobe 600 Fälle<br>
-      RSI 28 · %B 0,08 · GD 50 247,43 · GD 200 272,61 ·
+      <h4>Kennzahlen</h4><p>Vorsprung +0,8 % ± 0,5 % · Chance/Risiko +1,53<br>
+      Kurs 194,84 USD · Stopp 154,62 · Qualität 83</p>
+      <h4>Technik</h4><p>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv<br>RSI 28 · GD 50 247,42 · GD 200 272,61 ·
       Trend ab · rel. Momentum 12-1 +15,4 %</p></div>
-    <div><h4>Analysten (Minimum-Varianz)</h4>
+    <div><h4>Analysten (Minimum-Varianz · F5)</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
       <tbody><tr><td>BMO Capital</td><td class='num'>329,00</td><td class='num'>60 %</td></tr><tr><td>RBC Capital</td><td class='num'>323,00</td><td class='num'>10 %</td></tr><tr><td>Barclays</td><td class='num'>412,00</td><td class='num'>10 %</td></tr><tr><td>Evercore ISI Group</td><td class='num'>325,00</td><td class='num'>10 %</td></tr><tr><td>Wells Fargo</td><td class='num'>340,00</td><td class='num'>10 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,5 % · r₂ +3,5 % ± 6,5 %<br>
-      Fusion: r̂ +3,6 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,5 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,6 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value nicht belastbar (Gewinne zu instabil)<br>
-      Gewinnwachstum 12M +48,4 % · Revision 30T +0,8 % · 90T +4,2 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>
-<tr class="main">
-  <td class="num rank opt">4</td>
-  <td class="title"><span class="nm">Howmet Aerospace Inc.</span><span class="tk">HWM · USA</span></td>
-  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
-  <td class="num"><span class="crval">+1,48</span><span class="crbar" title="Chance/Risiko +1,48"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
-  <td class="num strong">+0,8 %</td>
-  <td class="num opt">± 0,5 %</td>
-  <td class="num opt">+3,6 % <span class="tag mv">MV · F5</span></td>
-  <td class="num opt">+3,3 %</td>
-  <td class="num opt">193,29</td>
-  <td class="num opt">172,33</td>
-  <td class="num opt">+19 %</td>
-  <td class="num opt">88</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
+      <p>Fair Value nicht belastbar (Gewinne zu instabil)<br>Gewinnwachstum 12M +48,4 % · Revision 30T +0,8 % · 90T +4,2 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details><details class='lrow'><summary><span class='t'><b>Howmet Aerospace Inc.</b><br><span class='muted small'>HWM · USA</span></span><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Beobachten</span><span class='num'>+0,8 %</span><span class='num hide-s'>166,99</span></summary><div class='lin'><div class="detgrid">
     <div><h4>Signal</h4><ul><li>Vorsprung ausreichend, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
-      <h4>Technik</h4><p>Kurs 193,29 USD · Stopp 172,33 · Qualität 88<br>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 negativ · Stichprobe 3,770 Fälle<br>
-      RSI 22 · %B -0,10 · GD 50 237,41 · GD 200 250,27 ·
+      <h4>Kennzahlen</h4><p>Vorsprung +0,8 % ± 0,5 % · Chance/Risiko +1,50<br>
+      Kurs 187,39 USD · Stopp 166,99 · Qualität 88</p>
+      <h4>Technik</h4><p>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 negativ<br>RSI 20 · GD 50 237,29 · GD 200 250,25 ·
       Trend ab · rel. Momentum 12-1 -1,9 %</p></div>
-    <div><h4>Analysten (Minimum-Varianz)</h4>
+    <div><h4>Analysten (Minimum-Varianz · F5)</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
       <tbody><tr><td>BNP Paribas</td><td class='num'>340,00</td><td class='num'>60 %</td></tr><tr><td>RBC Capital</td><td class='num'>300,00</td><td class='num'>10 %</td></tr><tr><td>Wells Fargo</td><td class='num'>255,00</td><td class='num'>10 %</td></tr><tr><td>UBS</td><td class='num'>326,00</td><td class='num'>10 %</td></tr><tr><td>TD Cowen</td><td class='num'>280,00</td><td class='num'>10 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,5 % · r₂ +3,3 % ± 6,5 %<br>
-      Fusion: r̂ +3,6 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,3 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,6 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value 229,53 USD (+19 % zum Kurs)<br>
-      Gewinnwachstum 12M +31,7 % · Revision 30T +0,7 % · 90T +7,5 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>
-<tr class="main">
-  <td class="num rank opt">5</td>
-  <td class="title"><span class="nm">Copart, Inc.</span><span class="tk">CPRT · USA</span></td>
-  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
-  <td class="num"><span class="crval">+1,41</span><span class="crbar" title="Chance/Risiko +1,41"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
-  <td class="num strong">+0,7 %</td>
-  <td class="num opt">± 0,5 %</td>
-  <td class="num opt">+3,6 % <span class="tag mv">MV · F5</span></td>
-  <td class="num opt">+2,9 %</td>
-  <td class="num opt">29,09</td>
-  <td class="num opt">26,14</td>
-  <td class="num opt">+68 %</td>
-  <td class="num opt">91</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
+      <p>Fair Value 229,53 USD (+22 % zum Kurs)<br>Gewinnwachstum 12M +31,7 % · Revision 30T +0,7 % · 90T +7,5 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details><details class='lrow'><summary><span class='t'><b>BE Semiconductor Industries N.V</b><br><span class='muted small'>BESI.AS · Niederlande</span></span><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Beobachten</span><span class='num'>+0,8 %</span><span class='num hide-s'>121,28</span></summary><div class='lin'><div class="detgrid">
     <div><h4>Signal</h4><ul><li>Vorsprung ausreichend, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
-      <h4>Technik</h4><p>Kurs 29,09 USD · Stopp 26,14 · Qualität 91<br>Trend ab, RSI 50–70, Bollinger oben, rel. Momentum 12-1 negativ · Stichprobe 5,485 Fälle<br>
-      RSI 57 · %B 1,07 · GD 50 29,94 · GD 200 32,42 ·
-      Trend ab · rel. Momentum 12-1 -46,5 %</p></div>
-    <div><h4>Analysten (Minimum-Varianz)</h4>
-      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
-      <tbody><tr><td>Barrington Research</td><td class='num'>40,00</td><td class='num'>60 %</td></tr><tr><td>Freedom Broker</td><td class='num'>36,00</td><td class='num'>10 %</td></tr><tr><td>BNP Paribas</td><td class='num'>43,00</td><td class='num'>10 %</td></tr><tr><td>HSBC</td><td class='num'>36,00</td><td class='num'>10 %</td></tr><tr><td>Barclays</td><td class='num'>25,00</td><td class='num'>10 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,5 % · r₂ +2,9 % ± 6,5 %<br>
-      Fusion: r̂ +3,5 % ± 0,5 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
-    <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value 49,01 USD (+68 % zum Kurs)<br>
-      Gewinnwachstum 12M +8,1 % · Revision 30T +2,9 % · 90T -2,2 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>
-<tr class="main">
-  <td class="num rank opt">6</td>
-  <td class="title"><span class="nm">BE Semiconductor Industries N.V</span><span class="tk">BESI.AS · Niederlande</span></td>
-  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
-  <td class="num"><span class="crval">+1,12</span><span class="crbar" title="Chance/Risiko +1,12"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
-  <td class="num strong">+0,8 %</td>
-  <td class="num opt">± 0,7 %</td>
-  <td class="num opt">+3,6 % <span class="tag fb">Konsens · F5</span></td>
-  <td class="num opt">+3,4 %</td>
-  <td class="num opt">162,45</td>
-  <td class="num opt">134,29</td>
-  <td class="num opt">+4 %</td>
-  <td class="num opt">81</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
-    <div><h4>Signal</h4><ul><li>Vorsprung ausreichend, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
-      <h4>Technik</h4><p>Kurs 162,45 EUR · Stopp 134,29 · Qualität 81<br>Trend ab, RSI 35–50, Bollinger Mitte, rel. Momentum 12-1 positiv · Stichprobe 2,356 Fälle<br>
-      RSI 38 · %B 0,26 · GD 50 187,95 · GD 200 215,10 ·
+      <h4>Kennzahlen</h4><p>Vorsprung +0,8 % ± 0,7 % · Chance/Risiko +1,13<br>
+      Kurs 147,00 EUR · Stopp 121,28 · Qualität 81</p>
+      <h4>Technik</h4><p>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv<br>RSI 31 · GD 50 187,54 · GD 200 215,00 ·
       Trend ab · rel. Momentum 12-1 +19,3 %</p></div>
-    <div><h4>Analysten (Konsens-Rückfall)</h4>
+    <div><h4>Analysten (Konsens-Rückfall · F5)</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
       <tbody><tr><td>Konsens (23 Analysten)</td><td class='num'>250,00</td><td class='num'>100 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,7 % · r₂ +3,4 % ± 6,5 %<br>
-      Fusion: r̂ +3,6 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,5 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,6 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value 169,23 EUR (+4 % zum Kurs)<br>
-      Gewinnwachstum 12M +106,6 % · Revision 30T -1,0 % · 90T +1,9 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>
-<tr class="main">
-  <td class="num rank opt">7</td>
-  <td class="title"><span class="nm">PING AN</span><span class="tk">2318.HK · Hongkong</span></td>
-  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
-  <td class="num"><span class="crval">+1,12</span><span class="crbar" title="Chance/Risiko +1,12"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
-  <td class="num strong">+0,8 %</td>
-  <td class="num opt">± 0,7 %</td>
-  <td class="num opt">+3,6 % <span class="tag fb">Konsens · F5</span></td>
-  <td class="num opt">+3,5 %</td>
-  <td class="num opt">49,16</td>
-  <td class="num opt">45,03</td>
-  <td class="num opt">+18 %</td>
-  <td class="num opt">78</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
+      <p>Fair Value 169,23 EUR (+15 % zum Kurs)<br>Gewinnwachstum 12M +107,2 % · Revision 30T -0,9 % · 90T +1,2 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details><details class='lrow'><summary><span class='t'><b>Ping An</b><br><span class='muted small'>2318.HK · Hongkong</span></span><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Beobachten</span><span class='num'>+0,8 %</span><span class='num hide-s'>44,91</span></summary><div class='lin'><div class="detgrid">
     <div><h4>Signal</h4><ul><li>Vorsprung ausreichend, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
-      <h4>Technik</h4><p>Kurs 49,16 HKD · Stopp 45,03 · Qualität 78<br>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv · Stichprobe 600 Fälle<br>
-      RSI 29 · %B 0,15 · GD 50 53,14 · GD 200 57,33 ·
+      <h4>Kennzahlen</h4><p>Vorsprung +0,8 % ± 0,7 % · Chance/Risiko +1,13<br>
+      Kurs 49,02 HKD · Stopp 44,91 · Qualität 78</p>
+      <h4>Technik</h4><p>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv<br>RSI 27 · GD 50 53,13 · GD 200 57,33 ·
       Trend ab · rel. Momentum 12-1 +4,5 %</p></div>
-    <div><h4>Analysten (Konsens-Rückfall)</h4>
+    <div><h4>Analysten (Konsens-Rückfall · F5)</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
-      <tbody><tr><td>Konsens (15 Analysten)</td><td class='num'>81,58</td><td class='num'>100 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,7 % · r₂ +3,5 % ± 6,5 %<br>
-      Fusion: r̂ +3,6 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
+      <tbody><tr><td>Konsens (15 Analysten)</td><td class='num'>81,05</td><td class='num'>100 %</td></tr></tbody></table>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,5 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,6 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value 57,81 HKD (+18 % zum Kurs)<br>
-      Gewinnwachstum 12M +9,2 % · Revision 30T -4,2 % · 90T -6,6 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>
-<tr class="main">
-  <td class="num rank opt">8</td>
-  <td class="title"><span class="nm">BHARAT ELECTRONICS LTD</span><span class="tk">BEL.NS · Indien</span></td>
-  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
-  <td class="num"><span class="crval">+1,07</span><span class="crbar" title="Chance/Risiko +1,07"><span class="mid"></span><span class="fill" style="left:50.0%;width:50.0%"></span></span></td>
-  <td class="num strong">+0,8 %</td>
-  <td class="num opt">± 0,7 %</td>
-  <td class="num opt">+3,6 % <span class="tag fb">Konsens · F5</span></td>
-  <td class="num opt">+3,5 %</td>
-  <td class="num opt">356,45</td>
-  <td class="num opt">328,56</td>
-  <td class="num opt">+21 %</td>
-  <td class="num opt">78</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
+      <p>Fair Value 58,24 HKD (+19 % zum Kurs)<br>Gewinnwachstum 12M +10,0 % · Revision 30T -2,8 % · 90T -5,3 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details><details class='lrow'><summary><span class='t'><b>Bharat Electronics Ltd</b><br><span class='muted small'>BEL.NS · Indien</span></span><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Beobachten</span><span class='num'>+0,8 %</span><span class='num hide-s'>333,78</span></summary><div class='lin'><div class="detgrid">
     <div><h4>Signal</h4><ul><li>Vorsprung ausreichend, aber Trendfilter (Kurs &gt; GD 200, GD 50 &gt; GD 200) nicht erfüllt</li></ul>
-      <h4>Technik</h4><p>Kurs 356,45 INR · Stopp 328,56 · Qualität 78<br>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv · Stichprobe 600 Fälle<br>
-      RSI 27 · %B -0,12 · GD 50 393,56 · GD 200 415,88 ·
+      <h4>Kennzahlen</h4><p>Vorsprung +0,8 % ± 0,7 % · Chance/Risiko +1,09<br>
+      Kurs 362,00 INR · Stopp 333,78 · Qualität 78</p>
+      <h4>Technik</h4><p>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 positiv<br>RSI 30 · GD 50 393,67 · GD 200 415,91 ·
       Trend ab · rel. Momentum 12-1 +4,9 %</p></div>
-    <div><h4>Analysten (Konsens-Rückfall)</h4>
+    <div><h4>Analysten (Konsens-Rückfall · F5)</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
       <tbody><tr><td>Konsens (32 Analysten)</td><td class='num'>500,00</td><td class='num'>100 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,7 % · r₂ +3,5 % ± 6,5 %<br>
-      Fusion: r̂ +3,6 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,5 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,6 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value 430,84 INR (+21 % zum Kurs)<br>
-      Gewinnwachstum 12M +16,4 % · Revision 30T +0,0 % · 90T -1,0 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>
-<tr class="main">
-  <td class="num rank opt">9</td>
-  <td class="title"><span class="nm">TENCENT</span><span class="tk">0700.HK · Hongkong</span></td>
-  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
-  <td class="num"><span class="crval">+0,97</span><span class="crbar" title="Chance/Risiko +0,97"><span class="mid"></span><span class="fill" style="left:50.0%;width:48.3%"></span></span></td>
-  <td class="num strong">+0,7 %</td>
-  <td class="num opt">± 0,7 %</td>
-  <td class="num opt">+3,6 % <span class="tag fb">Konsens · F5</span></td>
-  <td class="num opt">+3,3 %</td>
-  <td class="num opt">383,60</td>
-  <td class="num opt">344,05</td>
-  <td class="num opt">+46 %</td>
-  <td class="num opt">83</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
-    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +0,97 – kein belastbarer Unterschied</li></ul>
-      <h4>Technik</h4><p>Kurs 383,60 HKD · Stopp 344,05 · Qualität 83<br>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 negativ · Stichprobe 3,770 Fälle<br>
-      RSI 27 · %B -0,06 · GD 50 431,03 · GD 200 474,21 ·
-      Trend ab · rel. Momentum 12-1 -25,0 %</p></div>
-    <div><h4>Analysten (Konsens-Rückfall)</h4>
-      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
-      <tbody><tr><td>Konsens (41 Analysten)</td><td class='num'>665,27</td><td class='num'>100 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,7 % · r₂ +3,3 % ± 6,5 %<br>
-      Fusion: r̂ +3,5 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
-    <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value 561,74 HKD (+46 % zum Kurs)<br>
-      Gewinnwachstum 12M +4,3 % · Revision 30T -1,7 % · 90T -7,1 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>
-<tr class="main">
-  <td class="num rank opt">10</td>
-  <td class="title"><span class="nm">DISCO CORPORATION</span><span class="tk">6146.T · Japan</span></td>
-  <td><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Halten</span></td>
-  <td class="num"><span class="crval">+0,97</span><span class="crbar" title="Chance/Risiko +0,97"><span class="mid"></span><span class="fill" style="left:50.0%;width:48.3%"></span></span></td>
-  <td class="num strong">+0,7 %</td>
-  <td class="num opt">± 0,7 %</td>
-  <td class="num opt">+3,6 % <span class="tag fb">Konsens · F5</span></td>
-  <td class="num opt">+3,3 %</td>
-  <td class="num opt">49.090,00</td>
-  <td class="num opt">39.056,94</td>
-  <td class="num opt">+25 %</td>
-  <td class="num opt">87</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
-    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +0,97 – kein belastbarer Unterschied</li></ul>
-      <h4>Technik</h4><p>Kurs 49.090,00 JPY · Stopp 39.056,94 · Qualität 87<br>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 negativ · Stichprobe 3,770 Fälle<br>
-      RSI 32 · %B 0,04 · GD 50 56.467,08 · GD 200 66.324,98 ·
+      <p>Fair Value 430,84 INR (+19 % zum Kurs)<br>Gewinnwachstum 12M +16,4 % · Revision 30T +0,0 % · 90T -1,0 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details><details class='lrow'><summary><span class='t'><b>Disco Corporation</b><br><span class='muted small'>6146.T · Japan</span></span><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Beobachten</span><span class='num'>+0,7 %</span><span class='num hide-s'>40.782,85</span></summary><div class='lin'><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +0,98 – kein belastbarer Unterschied</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,7 % ± 0,7 % · Chance/Risiko +0,98<br>
+      Kurs 51.230,00 JPY · Stopp 40.782,85 · Qualität 87</p>
+      <h4>Technik</h4><p>Trend ab, RSI 35–50, Bollinger unten, rel. Momentum 12-1 negativ<br>RSI 36 · GD 50 56.509,88 · GD 200 66.335,68 ·
       Trend ab · rel. Momentum 12-1 -17,7 %</p></div>
-    <div><h4>Analysten (Konsens-Rückfall)</h4>
+    <div><h4>Analysten (Konsens-Rückfall · F5)</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
-      <tbody><tr><td>Konsens (18 Analysten)</td><td class='num'>79.600,00</td><td class='num'>100 %</td></tr></tbody></table>
-      <p>Messfehler: r₁ +3,6 % ± 0,7 % · r₂ +3,3 % ± 6,5 %<br>
-      Fusion: r̂ +3,5 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %<br>
-      Gewicht Analyst / Technik: 100 % / 0 %</p></div>
+      <tbody><tr><td>Konsens (20 Analysten)</td><td class='num'>77.850,00</td><td class='num'>100 %</td></tr></tbody></table>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,0 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,5 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>Fair Value 61.565,68 JPY (+25 % zum Kurs)<br>
-      Gewinnwachstum 12M +31,9 % · Revision 30T +1,3 % · 90T +5,0 %</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr></tbody></table></div>
+      <p>Fair Value 61.759,33 JPY (+21 % zum Kurs)<br>Gewinnwachstum 12M +32,3 % · Revision 30T +2,0 % · 90T +5,7 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details><details class='lrow'><summary><span class='t'><b>Tencent</b><br><span class='muted small'>0700.HK · Hongkong</span></span><span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/></svg>Beobachten</span><span class='num'>+0,7 %</span><span class='num hide-s'>346,18</span></summary><div class='lin'><div class="detgrid">
+    <div><h4>Signal</h4><ul><li>Vorsprung +0,7 % ggü. Watchlist-Median, Chance/Risiko +0,98 – kein belastbarer Unterschied</li></ul>
+      <h4>Kennzahlen</h4><p>Vorsprung +0,7 % ± 0,7 % · Chance/Risiko +0,98<br>
+      Kurs 386,00 HKD · Stopp 346,18 · Qualität 83</p>
+      <h4>Technik</h4><p>Trend ab, RSI &lt;35, Bollinger unten, rel. Momentum 12-1 negativ<br>RSI 29 · GD 50 431,08 · GD 200 474,22 ·
+      Trend ab · rel. Momentum 12-1 -25,0 %</p></div>
+    <div><h4>Analysten (Konsens-Rückfall · F5)</h4>
+      <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
+      <tbody><tr><td>Konsens (41 Analysten)</td><td class='num'>659,98</td><td class='num'>100 %</td></tr></tbody></table>
+      <p>r₁ Analysten +3,6 % · r₂ Technik +3,3 % · Gewicht 100 % / 0 %<br>
+      Fusion r̂ +3,5 % ± 0,7 % · inkl. Kursrauschen ± 12,7 %</p></div>
+    <div><h4>Bewertung und Erwartung</h4>
+      <p>Fair Value 561,04 HKD (+45 % zum Kurs)<br>Gewinnwachstum 12M +4,2 % · Revision 30T -1,9 % · 90T -7,3 %</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div></div></details>
+  <p class="muted small">Sortiert nach Chance/Risiko (Vorsprung je Schätzfehler), höchstens 5 US-Titel.</p>
+</div></details>
 
-<h2>Ausstiegssignale in der Watchlist</h2>
-<p>Alle Titel der Watchlist, bei denen eine Ausstiegsregel greift.</p>
-<div class="card"><table>
-<thead><tr><th>Titel</th><th>Grund</th><th class="num">Kurs</th><th class="num">Chance/Risiko</th></tr></thead>
-<tbody><tr><td class='title'><span class='nm'>Applied Materials, Inc.</span><span class='tk'>AMAT · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>375,58</td><td class='num'>+1,48</td></tr><tr><td class='title'><span class='nm'>KLA Corporation</span><span class='tk'>KLAC · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200; GD 50 kreuzt GD 200 nach unten</td><td class='num'>147,83</td><td class='num'>+1,48</td></tr><tr><td class='title'><span class='nm'>Lam Research Corporation</span><span class='tk'>LRCX · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>230,15</td><td class='num'>+1,47</td></tr><tr><td class='title'><span class='nm'>Comfort Systems USA, Inc.</span><span class='tk'>FIX · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200; GD 50 kreuzt GD 200 nach unten</td><td class='num'>1.279,37</td><td class='num'>+1,47</td></tr><tr><td class='title'><span class='nm'>Cadence Design Systems, Inc.</span><span class='tk'>CDNS · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>309,65</td><td class='num'>+1,41</td></tr><tr><td class='title'><span class='nm'>Alphabet Inc.</span><span class='tk'>GOOG · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>320,76</td><td class='num'>+1,38</td></tr><tr><td class='title'><span class='nm'>Amphenol Corporation</span><span class='tk'>APH · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>73,07</td><td class='num'>+1,29</td></tr><tr><td class='title'><span class='nm'>ASM International N.V.</span><span class='tk'>ASM.AS · Niederlande</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>760,00</td><td class='num'>+1,07</td></tr><tr><td class='title'><span class='nm'>NTES</span><span class='tk'>9999.HK · Hongkong</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>183,30</td><td class='num'>+0,10</td></tr><tr><td class='title'><span class='nm'>FAST RETAILING CO LTD</span><span class='tk'>9983.T · Japan</span></td><td>GD 50 kreuzt GD 200 nach unten</td><td class='num'>76.630,00</td><td class='num'>+0,08</td></tr><tr><td class='title'><span class='nm'>BSE LIMITED</span><span class='tk'>BSE.NS · Indien</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>3.199,60</td><td class='num'>+0,05</td></tr><tr><td class='title'><span class='nm'>NESTLE INDIA LIMITED</span><span class='tk'>NESTLEIND.NS · Indien</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>1.164,30</td><td class='num'>-0,02</td></tr><tr><td class='title'><span class='nm'>Interactive Brokers Group, Inc.</span><span class='tk'>IBKR · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>82,28</td><td class='num'>-0,10</td></tr><tr><td class='title'><span class='nm'>EICHER MOTORS LTD</span><span class='tk'>EICHERMOT.NS · Indien</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>6.940,50</td><td class='num'>-0,10</td></tr><tr><td class='title'><span class='nm'>BAJAJ FINANCE LIMITED</span><span class='tk'>BAJFINANCE.NS · Indien</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>930,75</td><td class='num'>-0,10</td></tr><tr><td class='title'><span class='nm'>Trane Technologies plc</span><span class='tk'>TT · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200; GD 50 kreuzt GD 200 nach unten</td><td class='num'>448,80</td><td class='num'>-0,17</td></tr></tbody></table></div>
+<details class="sec"><summary>Bestehende Ausstiegssignale (13)</summary><div class="secin">
+  <table><thead><tr><th>Titel</th><th>Grund</th><th class="num">Kurs</th></tr></thead><tbody><tr><td class='title'><span class='nm'>Applied Materials, Inc.</span><span class='tk'>AMAT · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>381,55</td></tr><tr><td class='title'><span class='nm'>KLA Corporation</span><span class='tk'>KLAC · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200; GD 50 kreuzt GD 200 nach unten</td><td class='num'>148,10</td></tr><tr><td class='title'><span class='nm'>Lam Research Corporation</span><span class='tk'>LRCX · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>230,74</td></tr><tr><td class='title'><span class='nm'>Comfort Systems USA, Inc.</span><span class='tk'>FIX · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200; GD 50 kreuzt GD 200 nach unten</td><td class='num'>1.166,52</td></tr><tr><td class='title'><span class='nm'>Cadence Design Systems, Inc.</span><span class='tk'>CDNS · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>316,04</td></tr><tr><td class='title'><span class='nm'>Alphabet Inc.</span><span class='tk'>GOOG · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>320,58</td></tr><tr><td class='title'><span class='nm'>ASM International N.V.</span><span class='tk'>ASM.AS · Niederlande</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>698,60</td></tr><tr><td class='title'><span class='nm'>BSE Limited</span><span class='tk'>BSE.NS · Indien</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>3.230,80</td></tr><tr><td class='title'><span class='nm'>Fast Retailing Co Ltd</span><span class='tk'>9983.T · Japan</span></td><td>GD 50 kreuzt GD 200 nach unten</td><td class='num'>74.700,00</td></tr><tr><td class='title'><span class='nm'>Nestle India Limited</span><span class='tk'>NESTLEIND.NS · Indien</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>1.175,00</td></tr><tr><td class='title'><span class='nm'>Eicher Motors Ltd</span><span class='tk'>EICHERMOT.NS · Indien</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>7.066,00</td></tr><tr><td class='title'><span class='nm'>Bajaj Finance Limited</span><span class='tk'>BAJFINANCE.NS · Indien</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200</td><td class='num'>928,95</td></tr><tr><td class='title'><span class='nm'>Trane Technologies plc</span><span class='tk'>TT · USA</span></td><td>Schlusskurs 2 Tage in Folge unter GD 200; GD 50 kreuzt GD 200 nach unten</td><td class='num'>446,81</td></tr></tbody></table>
+</div></details>
 
-<h2>Güte und Kalibrierung</h2>
-<p>Kalibrierung vom 2026-10-22 · Universum 881 Titel,
-nach Größenfilter 760.</p>
-<div class="two">
-  <div class="card prose"><h4 style="margin:0 0 6px">Treffsicherheit im Testzeitraum</h4><b>Technik:</b> Korrelation +0,019, Treffsicherheit b = 0,25 (roh 0,25), Messrauschen ± 6,5 %, 52.288 Testfälle<br><b>Analysten (linear, nur zur Information):</b> Korrelation +0,018, Treffsicherheit b = 0,05 (roh 0,05), Messrauschen ± 6,6 %, 29.442 Testfälle<br><span class='muted'>b = 1: Prognose voll gültig, b = 0: keine Information. Die Kalman-Gewichte folgen daraus automatisch.</span>
-    <h4 style="margin:14px 0 6px">Analysten nach Rang (Fünftel)</h4><table class='mini'><thead><tr><th>Fünftel</th><th class='num'>Lernzeitraum</th><th class='num'>Testzeitraum</th><th class='num'>verwendet</th><th class='num'>Fälle</th></tr></thead><tbody><tr><td>F1 (niedrigste)</td><td class='num'>-1,0 %</td><td class='num'>+0,7 %</td><td class='num'>-0,2 % ± 0,4 %</td><td class='num'>19.804</td></tr><tr><td>F2</td><td class='num'>-0,6 %</td><td class='num'>+0,1 %</td><td class='num'>-0,2 % ± 0,2 %</td><td class='num'>20.285</td></tr><tr><td>F3</td><td class='num'>-0,4 %</td><td class='num'>+0,3 %</td><td class='num'>-0,1 % ± 0,2 %</td><td class='num'>18.675</td></tr><tr><td>F4</td><td class='num'>-0,4 %</td><td class='num'>+0,2 %</td><td class='num'>-0,1 % ± 0,2 %</td><td class='num'>16.997</td></tr><tr><td>F5 (höchste Ziele)</td><td class='num'>+0,8 %</td><td class='num'>+1,8 %</td><td class='num'>+0,6 % ± 0,5 %</td><td class='num'>14.988</td></tr></tbody></table><span class='muted'>Vorsprung ggü. Ø aller Titel über 8 Wochen. Bestätigung im Testzeitraum b = 0,63 → Stufen mit Faktor 0,63 verwendet. Unsicherheit aus 32 nicht überlappenden 8-Wochen-Blöcken.</span>
-    <h4 style="margin:14px 0 6px">Horizonttest (Testzeitraum)</h4><table class='mini'><thead><tr><th>Horizont</th><th class='num'>Technik Korr.</th><th class='num'>Spreizung p. a.</th><th class='num'>Analysten Korr.</th><th class='num'>Spreizung p. a.</th></tr></thead><tbody><tr><td>8 Wochen</td><td class='num'>+0,019</td><td class='num'>-1,3 %</td><td class='num'>+0,018</td><td class='num'>+5,0 %</td></tr><tr><td>13 Wochen</td><td class='num'>+0,008</td><td class='num'>-3,8 %</td><td class='num'>+0,006</td><td class='num'>+4,7 %</td></tr><tr><td>26 Wochen</td><td class='num'>-0,009</td><td class='num'>-0,5 %</td><td class='num'>-0,006</td><td class='num'>+3,6 %</td></tr></tbody></table><span class='muted'>Spreizung = Ø Rendite der besten 20 % der Prognosen minus Ø aller Fälle, auf ein Jahr hochgerechnet.</span>
-    <h4 style="margin:14px 0 6px">Rückblick-Test Technik</h4>Testzeitraum 2025-04-23 bis 2026-10-22 (nicht zur Kalibrierung verwendet), 52.288 Beobachtungen. Korrelation Prognose/Ergebnis 0,019. Beste 20 % der Signalzustände: Ø 8-Wochen-Rendite +2,8 % (Trefferquote 56 %) gegenüber +3,0 % (56 %) im Durchschnitt.
-    <h4 style="margin:14px 0 6px">Erfolgskontrolle des Agenten</h4>Noch keine abgeschlossenen Signale (Auswertung jeweils 8 Wochen nach Signal). 2 offen.</div>
-  <div class="card"><table>
-    <thead><tr><th>Analystenhaus (geringste Fehlervarianz)</th><th class="num">Prognosen</th>
-    <th class="num">σ (8 Wo.)</th><th class="num">Verzerrung</th></tr></thead>
-    <tbody><tr><td>Ladenburg Thalmann</td><td class='num'>45</td><td class='num'>± 2,1 %</td><td class='num'>-1,7 %</td></tr><tr><td>Barrington Research</td><td class='num'>27</td><td class='num'>± 2,2 %</td><td class='num'>-0,4 %</td></tr><tr><td>Keefe, Bruyette &amp; Woods</td><td class='num'>822</td><td class='num'>± 2,4 %</td><td class='num'>-1,0 %</td></tr><tr><td>TD Securities</td><td class='num'>62</td><td class='num'>± 2,7 %</td><td class='num'>-1,0 %</td></tr><tr><td>Scotiabank</td><td class='num'>777</td><td class='num'>± 2,7 %</td><td class='num'>-1,9 %</td></tr><tr><td>Alembic Global</td><td class='num'>8</td><td class='num'>± 2,8 %</td><td class='num'>+0,9 %</td></tr><tr><td>Williams Trading</td><td class='num'>9</td><td class='num'>± 2,8 %</td><td class='num'>-0,5 %</td></tr><tr><td>SVB Securities</td><td class='num'>14</td><td class='num'>± 2,8 %</td><td class='num'>-2,3 %</td></tr><tr><td>Freedom Broker</td><td class='num'>121</td><td class='num'>± 2,9 %</td><td class='num'>-1,4 %</td></tr><tr><td>Odeon Capital</td><td class='num'>24</td><td class='num'>± 2,9 %</td><td class='num'>-2,5 %</td></tr><tr><td>SVB Leerink</td><td class='num'>155</td><td class='num'>± 2,9 %</td><td class='num'>-3,1 %</td></tr><tr><td>Northcoast Research</td><td class='num'>20</td><td class='num'>± 2,9 %</td><td class='num'>+0,5 %</td></tr></tbody></table>
-    <p class="muted" style="padding:8px 10px 6px;margin:0">Fehlerkorrelation zwischen Häusern ρ_ff = 0.95;
-    Gewichte als long-only Minimum-Varianz-Portfolio über die Fehler-Kovarianzmatrix.
-    σ und Korrelation beziehen sich auf das Messrauschen nach Abzug des gemeinsamen Kursrauschens.
-    Restkorrelation Analyst/Technik ρ_v = 0.20 (Annahme, mit zwei Quellen nicht schätzbar).</p></div>
-</div>
+<details class="sec"><summary>Kennzahlen, Güte und Methode</summary><div class="secin gq">
+  <div class="kpis">
+    <div class="kpi"><div class="v">119</div><div class="l">Titel in der Watchlist</div></div>
+    <div class="kpi"><div class="v">3 / 17</div><div class="l">Einstiege / Ausstiege</div></div>
+    <div class="kpi"><div class="v">79</div><div class="l">mit Minimum-Varianz-Ziel</div></div>
+    <div class="kpi"><div class="v">+2,8 %</div><div class="l">Watchlist-Median r̂ (Bezugswert)</div></div>
+  </div>
+  <p>Vorsprung = Kalman-fusionierte erwartete 8-Wochen-Rendite r̂ minus Watchlist-Median. Chance/Risiko = Vorsprung ÷ Schätzfehler.
+  Einstieg ab Vorsprung +0,7 % und Chance/Risiko über +1,00 bei intaktem Aufwärtstrend;
+  ein aktives Signal bleibt bis Vorsprung +0,5 %.
+  Kalibrierung vom 2026-10-22 · Universum 881 Titel, nach Größenfilter 760.</p>
+  <h4>Erfolgskontrolle des Agenten</h4><p>Noch keine abgeschlossenen Signale (Auswertung jeweils 8 Wochen nach Signal). 3 offen.</p>
+  <h4>Analysten nach Rang (Fünftel)</h4><table class='mini'><thead><tr><th>Fünftel</th><th class='num'>Lernzeitraum</th><th class='num'>Testzeitraum</th><th class='num'>verwendet</th><th class='num'>Fälle</th></tr></thead><tbody><tr><td>F1 (niedrigste)</td><td class='num'>-1,0 %</td><td class='num'>+0,7 %</td><td class='num'>-0,2 % ± 0,4 %</td><td class='num'>19.804</td></tr><tr><td>F2</td><td class='num'>-0,6 %</td><td class='num'>+0,1 %</td><td class='num'>-0,2 % ± 0,2 %</td><td class='num'>20.285</td></tr><tr><td>F3</td><td class='num'>-0,4 %</td><td class='num'>+0,3 %</td><td class='num'>-0,1 % ± 0,2 %</td><td class='num'>18.675</td></tr><tr><td>F4</td><td class='num'>-0,4 %</td><td class='num'>+0,2 %</td><td class='num'>-0,1 % ± 0,2 %</td><td class='num'>16.997</td></tr><tr><td>F5 (höchste Ziele)</td><td class='num'>+0,8 %</td><td class='num'>+1,8 %</td><td class='num'>+0,6 % ± 0,5 %</td><td class='num'>14.988</td></tr></tbody></table><span class='muted'>Vorsprung ggü. Ø aller Titel über 8 Wochen. Bestätigung im Testzeitraum b = 0,63 → Stufen mit Faktor 0,63 verwendet. Unsicherheit aus 32 nicht überlappenden 8-Wochen-Blöcken.</span>
+  <h4>Treffsicherheit im Testzeitraum</h4><p><b>Technik:</b> Korrelation +0,019, Treffsicherheit b = 0,25 (roh 0,25), Messrauschen ± 6,5 %, 52.288 Testfälle<br><b>Analysten (linear, nur zur Information):</b> Korrelation +0,018, Treffsicherheit b = 0,05 (roh 0,05), Messrauschen ± 6,6 %, 29.442 Testfälle<br><span class='muted'>b = 1: Prognose voll gültig, b = 0: keine Information. Die Kalman-Gewichte folgen daraus automatisch.</span></p>
+  <h4>Horizonttest</h4><table class='mini'><thead><tr><th>Horizont</th><th class='num'>Technik Korr.</th><th class='num'>Spreizung p. a.</th><th class='num'>Analysten Korr.</th><th class='num'>Spreizung p. a.</th></tr></thead><tbody><tr><td>8 Wochen</td><td class='num'>+0,019</td><td class='num'>-1,3 %</td><td class='num'>+0,018</td><td class='num'>+5,0 %</td></tr><tr><td>13 Wochen</td><td class='num'>+0,008</td><td class='num'>-3,8 %</td><td class='num'>+0,006</td><td class='num'>+4,7 %</td></tr><tr><td>26 Wochen</td><td class='num'>-0,009</td><td class='num'>-0,5 %</td><td class='num'>-0,006</td><td class='num'>+3,6 %</td></tr></tbody></table><span class='muted'>Spreizung = Ø Rendite der besten 20 % der Prognosen minus Ø aller Fälle, auf ein Jahr hochgerechnet.</span>
+  <h4>Rückblick-Test Technik</h4><p>Testzeitraum 2025-04-23 bis 2026-10-22 (nicht zur Kalibrierung verwendet), 52.288 Beobachtungen. Korrelation Prognose/Ergebnis 0,019. Beste 20 % der Signalzustände: Ø 8-Wochen-Rendite +2,8 % (Trefferquote 56 %) gegenüber +3,0 % (56 %) im Durchschnitt.</p>
+  <h4>Analystenhäuser mit geringster Fehlervarianz</h4>
+  <table class="mini"><thead><tr><th>Haus</th><th class="num">Prognosen</th><th class="num">σ (8 Wo.)</th><th class="num">Verzerrung</th></tr></thead>
+  <tbody><tr><td>Ladenburg Thalmann</td><td class='num'>45</td><td class='num'>± 2,1 %</td><td class='num'>-1,7 %</td></tr><tr><td>Barrington Research</td><td class='num'>27</td><td class='num'>± 2,2 %</td><td class='num'>-0,4 %</td></tr><tr><td>Keefe, Bruyette &amp; Woods</td><td class='num'>822</td><td class='num'>± 2,4 %</td><td class='num'>-1,0 %</td></tr><tr><td>TD Securities</td><td class='num'>62</td><td class='num'>± 2,7 %</td><td class='num'>-1,0 %</td></tr><tr><td>Scotiabank</td><td class='num'>777</td><td class='num'>± 2,7 %</td><td class='num'>-1,9 %</td></tr><tr><td>Alembic Global</td><td class='num'>8</td><td class='num'>± 2,8 %</td><td class='num'>+0,9 %</td></tr><tr><td>Williams Trading</td><td class='num'>9</td><td class='num'>± 2,8 %</td><td class='num'>-0,5 %</td></tr><tr><td>SVB Securities</td><td class='num'>14</td><td class='num'>± 2,8 %</td><td class='num'>-2,3 %</td></tr><tr><td>Freedom Broker</td><td class='num'>121</td><td class='num'>± 2,9 %</td><td class='num'>-1,4 %</td></tr><tr><td>Odeon Capital</td><td class='num'>24</td><td class='num'>± 2,9 %</td><td class='num'>-2,5 %</td></tr><tr><td>SVB Leerink</td><td class='num'>155</td><td class='num'>± 2,9 %</td><td class='num'>-3,1 %</td></tr><tr><td>Northcoast Research</td><td class='num'>20</td><td class='num'>± 2,9 %</td><td class='num'>+0,5 %</td></tr></tbody></table>
+  <p class="muted small">Fehlerkorrelation zwischen Häusern ρ_ff = 0.95; Minimum-Varianz-Gewichte zur Hälfte Richtung Gleichgewichtung geschrumpft.
+  Restkorrelation Analyst/Technik ρ_v = 0.20 (Annahme). Kursrauschen σε = 12,7 %.</p>
+</div></details>
 
 <footer>Automatisch erzeugt aus öffentlichen Marktdaten (Yahoo Finance). Ausstiegsregeln: Chance/Risiko unter
 -1,00, Schlusskurs 2 Tage unter GD 200 oder GD 50 kreuzt GD 200 nach unten.
