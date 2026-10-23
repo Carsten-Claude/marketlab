@@ -4,6 +4,7 @@ from __future__ import annotations
 import html
 import math
 import os
+import re
 
 import pandas as pd
 
@@ -65,6 +66,21 @@ def _nm(name: str) -> str:
     n = NAME_FIX.get(str(name).strip(), str(name).strip())
     if n.isupper() and len(n) > 4:
         n = " ".join(w if w in KEEP_UPPER else w.capitalize() for w in n.split())
+    return n
+
+
+_SUFFIX = re.compile(r"(,?\s+(Inc\.?|Incorporated|Corporation|Corp\.?|Company|Co\.?|Holdings?|Group|plc|PLC|"
+                     r"N\.?V\.?|S\.?A\.?|SE|AG|Ltd\.?|Limited|LLC|AB|ser\.\s*[AB]|Class\s+[A-C]))+\.?$")
+
+
+def _short(name: str) -> str:
+    """Kurzname für den Fließtext: Rechtsform- und Gattungszusätze entfernen."""
+    n = _nm(name)
+    for _ in range(3):
+        n2 = _SUFFIX.sub("", n).strip().rstrip(",")
+        if n2 == n or not n2:
+            break
+        n = n2
     return n
 
 
@@ -238,7 +254,7 @@ def render(run: dict, path: str | None = None) -> str:
                  for t, sig in zip(res["ticker"], res["signal"])]] if has_prev else res.iloc[0:0]
 
     def names(df, cap=4):
-        n_ = [_nm(x) for x in df["name"]]
+        n_ = [_short(x) for x in df["name"]]
         if len(n_) > cap:
             return ", ".join(n_[:cap]) + f" und {len(n_) - cap} weitere"
         return n_[0] if len(n_) == 1 else (", ".join(n_[:-1]) + " und " + n_[-1] if n_ else "")
