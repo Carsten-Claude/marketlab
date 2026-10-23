@@ -41,6 +41,8 @@ BADGE = {
                '</svg>Halten</span>'),
     "Ausstieg": ('<span class="badge crit"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9 1 2h8z"/></svg>'
                  'Ausstieg</span>'),
+    "Beobachten": ('<span class="badge hold"><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.2"/>'
+                   '</svg>Beobachten</span>'),
 }
 
 
@@ -52,49 +54,74 @@ def _cr_bar(cr: float, lim: float = 1.0) -> str:
             f'<span class="fill" style="left:{left:.1f}%;width:{w:.1f}%"></span></span>')
 
 
-def _row(r: pd.Series) -> str:
+KEEP_UPPER = {"ASML", "HSBC", "BYD", "TSMC", "ICICI", "HDFC", "SBI", "ITC", "NTPC", "TCS", "BSE", "AIA", "CK",
+              "HKEX", "LG", "SK", "AB", "SA", "SE", "AG", "NV", "N.V", "N.V.", "ADR", "PLC", "UBS", "BNP", "AXA", "SAP",
+              "LVMH", "ABB", "DSV", "RELX", "BAE", "GSK", "BP", "CRH", "ASM", "KLA", "DBS", "OCBC", "JD", "NIO"}
+NAME_FIX = {"NTES": "NetEase"}
+
+
+def _nm(name: str) -> str:
+    """Anzeigename: Kürzel-Namen ersetzen, GROSSSCHRIFT asiatischer Börsen vereinheitlichen."""
+    n = NAME_FIX.get(str(name).strip(), str(name).strip())
+    if n.isupper() and len(n) > 4:
+        n = " ".join(w if w in KEEP_UPPER else w.capitalize() for w in n.split())
+    return n
+
+
+def _q(r) -> str:
+    q = r.get("quintile")
+    return f" · F{int(q)}" if q == q and q else ""
+
+
+def _details(r: pd.Series) -> str:
     detail = "".join(
         f"<tr><td>{_e(d['firm'])}</td><td class='num'>{_num(d['target'])}</td>"
         f"<td class='num'>{_pct(d['weight'], 0, False)}</td></tr>" for d in r["analyst_detail"])
-    method_cls = "mv" if r["analyst_method"] == "Minimum-Varianz" else "fb"
-    method_lbl = ("MV" if method_cls == "mv" else "Konsens") + (f" · F{int(r['quintile'])}" if r.get("quintile") == r.get("quintile") and r.get("quintile") else "")
     reasons = "".join(f"<li>{_e(x)}</li>" for x in r["reasons"])
     trend = {1: "auf", 0: "gemischt", -1: "ab"}.get(r["trend"], "–")
-    return f"""
-<tr class="main">
-  <td class="num rank opt">{int(r['rank'])}</td>
-  <td class="title"><span class="nm">{_e(r['name'])}</span><span class="tk">{_e(r['ticker'])} · {_e(r['region'])}</span></td>
-  <td>{BADGE[r['signal']]}</td>
-  <td class="num"><span class="crval">{_sg(r['cr'])}</span>{_cr_bar(r['cr'])}</td>
-  <td class="num strong">{_pct(r['excess'])}</td>
-  <td class="num opt">± {_pct(r['sd'], 1, False)}</td>
-  <td class="num opt">{_pct(r['r1'])} <span class="tag {method_cls}">{method_lbl}</span></td>
-  <td class="num opt">{_pct(r['r2'])}</td>
-  <td class="num opt">{_num(r['price'])}</td>
-  <td class="num opt">{_num(r['stop'])}</td>
-  <td class="num opt">{_pct(r['fv_gap'], 0) if r['fv_ok'] else '<span class="muted" title="Gewinne zu instabil für eine KGV-basierte Bewertung">n. b.</span>'}</td>
-  <td class="num opt">{_num(r['quality'], 0)}</td>
-</tr>
-<tr class="det"><td colspan="12">
-  <details><summary>Begründung und Details</summary>
-  <div class="detgrid">
+    fv = (f"Fair Value {_num(r['fair_value'])} {_e(r['currency'] or '')} ({_pct(r['fv_gap'], 0)} zum Kurs)"
+          if r['fv_ok'] else "Fair Value nicht belastbar (Gewinne zu instabil)")
+    return f"""<div class="detgrid">
     <div><h4>Signal</h4><ul>{reasons}</ul>
-      <h4>Technik</h4><p>Kurs {_num(r['price'])} {_e(r['currency'] or '')} · Stopp {_num(r['stop'])} · Qualität {_num(r['quality'], 0)}<br>{_e(r['tech_state'])} · Stichprobe {int(r['tech_n']):,} Fälle<br>
-      RSI {_num(r['rsi'], 0)} · %B {_num(r['pct_b'], 2)} · GD 50 {_num(r['sma50'])} · GD 200 {_num(r['sma200'])} ·
+      <h4>Kennzahlen</h4><p>Vorsprung {_pct(r['excess'])} ± {_pct(r['sd'], 1, False)} · Chance/Risiko {_sg(r['cr'])}<br>
+      Kurs {_num(r['price'])} {_e(r['currency'] or '')} · Stopp {_num(r['stop'])} · Qualität {_num(r['quality'], 0)}</p>
+      <h4>Technik</h4><p>{_e(r['tech_state'])}<br>RSI {_num(r['rsi'], 0)} · GD 50 {_num(r['sma50'])} · GD 200 {_num(r['sma200'])} ·
       Trend {trend} · rel. Momentum 12-1 {_pct(r['rel_mom'])}</p></div>
-    <div><h4>Analysten ({_e(r['analyst_method'])})</h4>
+    <div><h4>Analysten ({_e(r['analyst_method'])}{_q(r)})</h4>
       <table class="mini"><thead><tr><th>Haus</th><th class="num">Kursziel</th><th class="num">Gewicht</th></tr></thead>
       <tbody>{detail}</tbody></table>
-      <p>Messfehler: r₁ {_pct(r['r1'])} ± {_pct(r['sd1'], 1, False)} · r₂ {_pct(r['r2'])} ± {_pct(r['sd2'], 1, False)}<br>
-      Fusion: r̂ {_pct(r['x'])} ± {_pct(r['sd'], 1, False)} · inkl. Kursrauschen ± {_pct(r['sd_total'], 1, False)}<br>
-      Gewicht Analyst / Technik: {_pct(r['w_analyst'], 0, False)} / {_pct(r['w_tech'], 0, False)}</p></div>
+      <p>r₁ Analysten {_pct(r['r1'])} · r₂ Technik {_pct(r['r2'])} · Gewicht {_pct(r['w_analyst'], 0, False)} / {_pct(r['w_tech'], 0, False)}<br>
+      Fusion r̂ {_pct(r['x'])} ± {_pct(r['sd'], 1, False)} · inkl. Kursrauschen ± {_pct(r['sd_total'], 1, False)}</p></div>
     <div><h4>Bewertung und Erwartung</h4>
-      <p>{f"Fair Value {_num(r['fair_value'])} {_e(r['currency'] or '')} ({_pct(r['fv_gap'], 0)} zum Kurs)" if r['fv_ok'] else "Fair Value nicht belastbar (Gewinne zu instabil)"}<br>
-      Gewinnwachstum 12M {_pct(r['growth_12m'])} · Revision 30T {_pct(r['revision_30d'])} · 90T {_pct(r['revision_90d'])}</p>
-      <p class="muted">Bewertung und Gewinnerwartung werden angezeigt, fließen aber noch nicht ins Filter
-      (geplant als dritte und vierte Messquelle).</p></div>
-  </div></details>
-</td></tr>"""
+      <p>{fv}<br>Gewinnwachstum 12M {_pct(r['growth_12m'])} · Revision 30T {_pct(r['revision_30d'])} · 90T {_pct(r['revision_90d'])}</p>
+      <p class="muted">Information, fließt nicht ins Signal.</p></div>
+  </div>"""
+
+
+def _card(r: pd.Series, kind: str) -> str:
+    """kind: new_in | active | new_out | ended"""
+    sig = {"new_in": "Einstieg", "active": "Einstieg", "new_out": "Ausstieg", "ended": "Halten"}[kind]
+    cls = {"Einstieg": "g", "Ausstieg": "r", "Halten": "n"}[sig]
+    tag = {"new_in": "<span class='new'>neu</span>", "ended": "<span class='new grey'>Signal beendet</span>",
+           "new_out": "<span class='new'>neu</span>", "active": ""}[kind]
+    if sig == "Einstieg":
+        kv = (f"<span>Vorsprung <b>{_pct(r['excess'])}</b></span><span>Stopp <b>{_num(r['stop'])}</b></span>"
+              f"<span>Kurs <b>{_num(r['price'])}</b> <span class='muted'>{_e(r['currency'] or '')}</span></span>")
+    else:
+        kv = f"<span>Kurs <b>{_num(r['price'])}</b> <span class='muted'>{_e(r['currency'] or '')}</span></span>"
+    why = "; ".join(r["reasons"])
+    return (f"<div class='bcard {cls}'><div class='top'><div><b>{_e(_nm(r['name']))}</b>{tag}<br>"
+            f"<span class='muted small'>{_e(r['ticker'])} · {_e(r['region'])}</span></div>{BADGE[sig]}</div>"
+            f"<div class='kv'>{kv}</div><div class='why'>{_e(why)}</div>"
+            f"<details class='more'><summary>Details</summary>{_details(r)}</details></div>")
+
+
+def _listrow(r: pd.Series, new: bool) -> str:
+    lbl = BADGE[r["signal"]] if r["signal"] == "Einstieg" else BADGE["Beobachten"]
+    return (f"<details class='lrow'><summary><span class='t'><b>{_e(_nm(r['name']))}</b>{'<span class=new>neu</span>' if new else ''}"
+            f"<br><span class='muted small'>{_e(r['ticker'])} · {_e(r['region'])}</span></span>{lbl}"
+            f"<span class='num'>{_pct(r['excess'])}</span><span class='num hide-s'>{_num(r['stop'])}</span></summary>"
+            f"<div class='lin'>{_details(r)}</div></details>")
 
 
 def render(run: dict, path: str | None = None) -> str:
@@ -191,13 +218,67 @@ def render(run: dict, path: str | None = None) -> str:
                   f"({_pct(bt['hit_all'], 0, False)}) im Durchschnitt.")
 
     stamp = f"{WEEKDAY[asof.weekday()]}, {asof.strftime('%d.%m.%Y')}"
-    rows = "".join(_row(r) for _, r in top.iterrows())
     banner = ('<div class="warn">Testlauf mit synthetischen Daten – keine echten Kurse.</div>' if synth else "")
     if calib.get("analysts_reused"):
         banner += (f'<div class="warn">Analystendaten beim letzten Monatslauf nicht abrufbar – '
                    f'Analysten-Kalibrierung vom {_e(calib["analysts_reused"])} weiterverwendet.</div>')
     elif not ca.get("n"):
         banner += '<div class="warn">Keine Analysten-Kalibrierung vorhanden – Analystenquelle eingeschränkt.</div>'
+
+    # ---- Tagesbrief: Veränderungen gegenüber dem Vortag
+    prev = run.get("prev") or {}
+    has_prev = bool(prev)
+    by_sig = lambda s_: res[res["signal"] == s_]
+    ent = by_sig("Einstieg")
+    new_in = ent[[prev.get(t) != "Einstieg" for t in ent["ticker"]]] if has_prev else ent
+    active = ent[[prev.get(t) == "Einstieg" for t in ent["ticker"]]] if has_prev else ent.iloc[0:0]
+    new_out = exits[[prev.get(t) != "Ausstieg" for t in exits["ticker"]]] if has_prev else exits.iloc[0:0]
+    old_out = exits.drop(new_out.index)
+    ended = res[[prev.get(t) == "Einstieg" and sig != "Einstieg" and sig != "Ausstieg"
+                 for t, sig in zip(res["ticker"], res["signal"])]] if has_prev else res.iloc[0:0]
+
+    def names(df, cap=4):
+        n_ = [_nm(x) for x in df["name"]]
+        if len(n_) > cap:
+            return ", ".join(n_[:cap]) + f" und {len(n_) - cap} weitere"
+        return n_[0] if len(n_) == 1 else (", ".join(n_[:-1]) + " und " + n_[-1] if n_ else "")
+    ZW = {1: "ein", 2: "zwei", 3: "drei", 4: "vier", 5: "fünf"}
+    word = lambda n_: ZW.get(n_, str(n_))
+    parts = []
+    if len(new_in):
+        parts.append(f"<b>{word(len(new_in)).capitalize() if len(new_in) > 1 else 'Ein'} neue{'s' if len(new_in) == 1 else ''} "
+                     f"Einstiegssignal{'e' if len(new_in) > 1 else ''}</b>: {_e(names(new_in))}.")
+    if len(ended):
+        parts.append(f"<b>Einstiegssignal beendet</b>: {_e(names(ended))}.")
+    if len(new_out):
+        parts.append(f"<b>{word(len(new_out)).capitalize()} Titel neu im Ausstieg</b>: {_e(names(new_out))}.")
+    if not parts:
+        parts.append("<b>Keine neuen Signale heute.</b>")
+    if len(active):
+        parts.append(f"Weiterhin aktiv: {_e(names(active, 3))}.")
+    if not has_prev:
+        parts = [f"Erster Lauf ohne Vortagesvergleich: <b>{len(ent)} Einstiegssignal{'e' if len(ent) != 1 else ''}</b>"
+                 f"{(': ' + _e(names(ent))) if len(ent) else ''}, {len(exits)} Ausstiegssignale."]
+    brief = " ".join(parts)
+
+    action_cards = ("".join(_card(r, "new_in") for _, r in new_in.iterrows())
+                    + "".join(_card(r, "ended") for _, r in ended.iterrows())
+                    + "".join(_card(r, "new_out") for _, r in new_out.iterrows()))
+    action_html = (f'<div class="label">Heute neu</div><div class="cards">{action_cards}</div>' if action_cards else "")
+    act = [_card(r, "active") for _, r in active.iterrows()]
+    active_html = ""
+    if act:
+        active_html = f'<div class="label">Aktive Einstiegssignale ({len(act)})</div><div class="cards">{"".join(act[:6])}</div>'
+        if len(act) > 6:
+            active_html += (f'<details class="sec"><summary>Weitere {len(act) - 6} aktive Einstiegssignale</summary>'
+                            f'<div class="secin"><div class="cards">{"".join(act[6:])}</div></div></details>')
+
+    new_set = set(new_in["ticker"])
+    watch_rows = "".join(_listrow(r, r["ticker"] in new_set) for _, r in top.iterrows())
+    exit_rows = "".join(
+        f"<tr><td class='title'><span class='nm'>{_e(_nm(r['name']))}</span><span class='tk'>{_e(r['ticker'])} · {_e(r['region'])}</span></td>"
+        f"<td>{_e('; '.join(r['reasons']))}</td><td class='num'>{_num(r['price'])}</td></tr>" for _, r in old_out.iterrows()) or \
+        "<tr><td colspan='3' class='muted'>Keine weiteren Ausstiegssignale.</td></tr>"
 
     page = f"""<!doctype html>
 <html lang="de"><head><meta charset="utf-8">
@@ -221,102 +302,98 @@ def render(run: dict, path: str | None = None) -> str:
   --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10); --series:#3987e5;
   --goodtext:#0ca30c; --warnbg:#3a2e10; }}
 * {{ box-sizing:border-box; }}
-body {{ margin:0; background:var(--page); color:var(--ink); font:14px/1.5 Inter, system-ui, sans-serif; }}
-.wrap {{ max-width:1320px; margin:0 auto; padding:32px 16px 64px; }}
-header h1 {{ font:600 30px/1.1 "Source Serif 4", Georgia, serif; margin:0 0 4px; letter-spacing:-.01em; }}
-header .sub {{ color:var(--ink2); margin:0; }}
-.kpis {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:24px 0 32px; }}
-.kpi {{ background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:14px 16px; }}
-.kpi .v {{ font:600 26px/1.1 "Source Serif 4", Georgia, serif; }}
-.kpi .l {{ color:var(--ink2); font-size:12.5px; margin-top:2px; }}
-h2 {{ font:600 20px/1.2 "Source Serif 4", Georgia, serif; margin:36px 0 6px; }}
-h2 + p {{ color:var(--ink2); margin:0 0 12px; max-width:860px; }}
-.card {{ background:var(--surface); border:1px solid var(--ring); border-radius:10px; overflow-x:auto; }}
-table {{ border-collapse:collapse; width:100%; }}
-th {{ text-align:left; font-weight:500; color:var(--muted); font-size:12px; padding:10px 10px; border-bottom:1px solid var(--axis); white-space:nowrap; }}
-td {{ padding:9px 10px; border-bottom:1px solid var(--grid); vertical-align:middle; }}
-.num {{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }}
-.strong {{ font-weight:600; }}
-.rank {{ color:var(--muted); }}
-.title .nm {{ display:block; font-weight:500; min-width:150px; }}
-.title .tk {{ display:block; color:var(--muted); font-size:12px; }}
-tr.main td {{ border-bottom:none; }}
-tr.det td {{ padding-top:0; }}
-details summary {{ cursor:pointer; color:var(--ink2); font-size:12.5px; padding:2px 0 6px; }}
-.detgrid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; padding:6px 0 12px; }}
-.detgrid h4 {{ margin:6px 0 4px; font-size:12.5px; color:var(--ink2); font-weight:600; }}
-.detgrid p, .detgrid ul {{ margin:0 0 8px; color:var(--ink); font-size:13px; }}
-.detgrid ul {{ padding-left:18px; }}
-.mini th, .mini td {{ padding:4px 6px; font-size:12.5px; }}
-.muted {{ color:var(--muted); }}
-.badge {{ display:inline-flex; align-items:center; gap:6px; font-weight:500; font-size:13px; white-space:nowrap; }}
+body {{ margin:0; background:var(--page); color:var(--ink); font:15px/1.5 Inter, system-ui, sans-serif; }}
+.wrap {{ max-width:1000px; margin:0 auto; padding:28px 16px 56px; }}
+h1 {{ font:600 28px/1.1 "Source Serif 4", Georgia, serif; margin:0; }}
+.sub {{ color:var(--ink2); margin:4px 0 0; font-size:14px; }}
+.brief {{ font:500 19px/1.45 "Source Serif 4", Georgia, serif; margin:18px 0 4px; max-width:780px; }}
+.label {{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin:22px 0 8px; }}
+.cards {{ display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:12px; align-items:start; }}
+.bcard {{ background:var(--surface); border:1px solid var(--ring); border-left:4px solid var(--good); border-radius:10px; padding:14px 16px; }}
+.bcard.r {{ border-left-color:var(--crit); }} .bcard.n {{ border-left-color:var(--axis); }}
+.bcard .top {{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }}
+.kv {{ display:flex; gap:16px; flex-wrap:wrap; font-size:14px; color:var(--ink2); margin:10px 0 4px; }}
+.kv b {{ color:var(--ink); }}
+.why {{ font-size:13px; color:var(--muted); }}
+.small {{ font-size:12px; }}
+.new {{ font-size:11px; font-weight:600; color:var(--series); border:1px solid var(--series); border-radius:4px; padding:0 5px; margin-left:6px; white-space:nowrap; }}
+.new.grey {{ color:var(--ink2); border-color:var(--axis); }}
+.badge {{ display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:13px; white-space:nowrap; }}
 .badge svg {{ width:10px; height:10px; }}
 .badge.good {{ color:var(--goodtext); }} .badge.good svg {{ fill:var(--good); }}
 .badge.crit {{ color:var(--crit); }} .badge.crit svg {{ fill:var(--crit); }}
-.badge.hold {{ color:var(--ink2); }} .badge.hold svg {{ fill:var(--muted); }}
-.tag {{ font-size:10.5px; padding:1px 5px; border-radius:4px; border:1px solid var(--ring); color:var(--ink2); margin-left:4px; }}
-.tag.mv {{ border-color:var(--series); color:var(--series); }}
-.crval {{ display:inline-block; min-width:44px; }}
-.crbar {{ position:relative; display:inline-block; width:70px; height:8px; vertical-align:middle; margin-left:6px; background:var(--grid); border-radius:4px; }}
-.crbar .mid {{ position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--axis); }}
-.crbar .fill {{ position:absolute; top:0; bottom:0; background:var(--series); border-radius:4px; }}
-.two {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; }}
-.two .card {{ padding:4px 0; }}
-.prose {{ padding:14px 16px; color:var(--ink); }}
-.warn {{ background:var(--warnbg); border-radius:8px; padding:10px 14px; margin:16px 0 0; font-weight:500; }}
-@media (max-width:760px) {{ .opt {{ display:none; }} .crbar {{ width:40px; }} td, th {{ padding-left:6px; padding-right:6px; }} .detgrid {{ grid-template-columns:1fr; }} .wrap {{ padding-top:20px; }} }}
-footer {{ margin-top:40px; color:var(--muted); font-size:12px; max-width:860px; }}
+.badge.hold {{ color:var(--ink2); font-weight:500; }} .badge.hold svg {{ fill:var(--muted); }}
+details.more > summary {{ cursor:pointer; color:var(--ink2); font-size:12.5px; margin-top:8px; }}
+details.sec {{ background:var(--surface); border:1px solid var(--ring); border-radius:10px; margin:12px 0; }}
+details.sec > summary {{ cursor:pointer; padding:13px 16px; font-weight:600; list-style:none; display:flex; justify-content:space-between; }}
+details.sec > summary::-webkit-details-marker {{ display:none; }}
+details.sec > summary::after {{ content:"＋"; color:var(--muted); }} details.sec[open] > summary::after {{ content:"－"; }}
+.secin {{ padding:0 16px 14px; }}
+.lhdr, details.lrow > summary {{ display:grid; grid-template-columns:1fr 130px 90px 90px; gap:8px; align-items:center; }}
+.lhdr {{ font-size:12px; color:var(--muted); padding:6px 0; border-bottom:1px solid var(--axis); }}
+details.lrow {{ border-bottom:1px solid var(--grid); }}
+details.lrow > summary {{ cursor:pointer; list-style:none; padding:10px 0; }}
+details.lrow > summary::-webkit-details-marker {{ display:none; }}
+.lin {{ padding:0 0 10px; }}
+.detgrid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; padding:8px 0 4px; }}
+.detgrid h4 {{ margin:6px 0 4px; font-size:12.5px; color:var(--ink2); font-weight:600; }}
+.detgrid p, .detgrid ul {{ margin:0 0 8px; font-size:13px; }} .detgrid ul {{ padding-left:18px; }}
+table {{ border-collapse:collapse; width:100%; }}
+th {{ text-align:left; font-weight:500; color:var(--muted); font-size:12px; padding:8px; border-bottom:1px solid var(--axis); }}
+td {{ padding:8px; border-bottom:1px solid var(--grid); vertical-align:top; font-size:14px; }}
+.mini th, .mini td {{ padding:4px 6px; font-size:12.5px; }}
+.num {{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }}
+.muted {{ color:var(--muted); }}
+.title .nm {{ display:block; font-weight:500; }} .title .tk {{ display:block; color:var(--muted); font-size:12px; }}
+.kpis {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:4px 0 16px; }}
+.kpi {{ border:1px solid var(--ring); border-radius:8px; padding:10px 12px; }}
+.kpi .v {{ font:600 20px/1.1 "Source Serif 4", Georgia, serif; }} .kpi .l {{ color:var(--ink2); font-size:12px; }}
+.gq h4 {{ margin:16px 0 6px; font-size:13px; }} .gq p {{ font-size:13.5px; color:var(--ink2); }}
+.warn {{ background:var(--warnbg); border-radius:8px; padding:10px 14px; margin:14px 0 0; font-weight:500; }}
+@media (max-width:620px) {{ .lhdr, details.lrow > summary {{ grid-template-columns:1fr 100px 64px; }} .hide-s {{ display:none; }}
+  .brief {{ font-size:17px; }} }}
+footer {{ margin-top:32px; color:var(--muted); font-size:12px; }}
 </style></head><body><div class="wrap">
-<header>
-  <h1>MarketLab</h1>
-  <p class="sub">Qualitätsaktien Europa · USA · Asien — Stand {stamp} · Horizont 8 Wochen</p>
-  {banner}
-</header>
+<h1>MarketLab</h1>
+<p class="sub">Tagesbrief {stamp} · Horizont 8 Wochen</p>
+{banner}
+<p class="brief">{brief}</p>
+{action_html}
+{active_html}
 
-<section class="kpis">
-  <div class="kpi"><div class="v">{len(res)}</div><div class="l">Titel in der Watchlist</div></div>
-  <div class="kpi"><div class="v">{n_in}</div><div class="l">Einstiegssignale</div></div>
-  <div class="kpi"><div class="v">{n_out}</div><div class="l">Ausstiegssignale</div></div>
-  <div class="kpi"><div class="v">{n_mv}</div><div class="l">Titel mit Minimum-Varianz-Analystenziel</div></div>
-  <div class="kpi"><div class="v">{_pct(mu)}</div><div class="l">Watchlist-Median r̂ (8 Wochen, Bezugswert)</div></div>
-  <div class="kpi"><div class="v">{_pct(noise['sigma_eps2'] ** 0.5, 1, False)}</div><div class="l">Kursrauschen σε (8 Wochen, {'geschätzt' if noise['identified'] else 'Annahme'})</div></div>
-</section>
+<div class="label">Mehr</div>
+<details class="sec"><summary>Beobachtungsliste – Top {len(top)}</summary><div class="secin">
+  <div class="lhdr"><span>Titel · antippen für Details</span><span>Signal</span><span class="num">Vorsprung</span><span class="num hide-s">Stopp</span></div>
+  {watch_rows}
+  <p class="muted small">Sortiert nach Chance/Risiko (Vorsprung je Schätzfehler), höchstens {cfg["signals"]["max_us_in_top"]} US-Titel.</p>
+</div></details>
 
-<h2>Top {len(top)} nach Chance/Risiko</h2>
-<p>Rangkriterium ist der Vorsprung je Schätzfehler: Kalman-fusionierte erwartete 8-Wochen-Rendite r̂ abzüglich des Watchlist-Medians ({_pct(mu)}), geteilt durch σ. Die gemeinsame Marktdrift zählt damit nicht als Signal. Einstiegssignale stehen vorn, danach die übrigen Titel nach Chance/Risiko; höchstens {cfg["signals"]["max_us_in_top"]} US-Titel. Titel mit aktivem Ausstiegssignal stehen in der Liste darunter.
-r₁ = Analystenquelle (MV = Minimum-Varianz der Top-5-Häuser, Konsens = Rückfall), r₂ = Chartquelle.
-Erwartete Rendite r̂ und Gewichtung der Quellen stehen in den Details.</p>
-<div class="card"><table>
-<thead><tr><th class="num opt">#</th><th>Titel</th><th>Signal</th><th class="num">Chance/Risiko</th>
-<th class="num">Vorsprung</th><th class="num opt">Schätzfehler σ</th><th class="num opt">r₁ Analysten</th><th class="num opt">r₂ Technik</th>
-<th class="num opt">Kurs</th><th class="num opt">Stopp</th><th class="num opt">Fair Value</th>
-<th class="num opt">Qualität</th></tr></thead>
-<tbody>{rows}</tbody></table></div>
+<details class="sec"><summary>Bestehende Ausstiegssignale ({len(old_out)})</summary><div class="secin">
+  <table><thead><tr><th>Titel</th><th>Grund</th><th class="num">Kurs</th></tr></thead><tbody>{exit_rows}</tbody></table>
+</div></details>
 
-<h2>Ausstiegssignale in der Watchlist</h2>
-<p>Alle Titel der Watchlist, bei denen eine Ausstiegsregel greift.</p>
-<div class="card"><table>
-<thead><tr><th>Titel</th><th>Grund</th><th class="num">Kurs</th><th class="num">Chance/Risiko</th></tr></thead>
-<tbody>{exit_rows}</tbody></table></div>
-
-<h2>Güte und Kalibrierung</h2>
-<p>Kalibrierung vom {_e(str(calib['created'])[:10])} · Universum {calib['universe_size']} Titel,
-nach Größenfilter {calib['size_filter']}.</p>
-<div class="two">
-  <div class="card prose"><h4 style="margin:0 0 6px">Treffsicherheit im Testzeitraum</h4>{skill_txt}
-    <h4 style="margin:14px 0 6px">Analysten nach Rang (Fünftel)</h4>{rk_txt}
-    <h4 style="margin:14px 0 6px">Horizonttest (Testzeitraum)</h4>{hz_txt}
-    <h4 style="margin:14px 0 6px">Rückblick-Test Technik</h4>{bt_txt}
-    <h4 style="margin:14px 0 6px">Erfolgskontrolle des Agenten</h4>{track_txt}</div>
-  <div class="card"><table>
-    <thead><tr><th>Analystenhaus (geringste Fehlervarianz)</th><th class="num">Prognosen</th>
-    <th class="num">σ (8 Wo.)</th><th class="num">Verzerrung</th></tr></thead>
-    <tbody>{firm_rows}</tbody></table>
-    <p class="muted" style="padding:8px 10px 6px;margin:0">Fehlerkorrelation zwischen Häusern ρ_ff = {ca['rho_ff']:.2f};
-    Gewichte als long-only Minimum-Varianz-Portfolio über die Fehler-Kovarianzmatrix.
-    σ und Korrelation beziehen sich auf das Messrauschen nach Abzug des gemeinsamen Kursrauschens.
-    Restkorrelation Analyst/Technik ρ_v = {noise['rho_v']:.2f} (Annahme, mit zwei Quellen nicht schätzbar).</p></div>
-</div>
+<details class="sec"><summary>Kennzahlen, Güte und Methode</summary><div class="secin gq">
+  <div class="kpis">
+    <div class="kpi"><div class="v">{len(res)}</div><div class="l">Titel in der Watchlist</div></div>
+    <div class="kpi"><div class="v">{n_in} / {n_out}</div><div class="l">Einstiege / Ausstiege</div></div>
+    <div class="kpi"><div class="v">{n_mv}</div><div class="l">mit Minimum-Varianz-Ziel</div></div>
+    <div class="kpi"><div class="v">{_pct(mu)}</div><div class="l">Watchlist-Median r̂ (Bezugswert)</div></div>
+  </div>
+  <p>Vorsprung = Kalman-fusionierte erwartete 8-Wochen-Rendite r̂ minus Watchlist-Median. Chance/Risiko = Vorsprung ÷ Schätzfehler.
+  Einstieg ab Vorsprung {_pct(cfg["signals"]["entry_min_excess"])} und Chance/Risiko über {_sg(cfg["signals"]["entry_cr"])} bei intaktem Aufwärtstrend;
+  ein aktives Signal bleibt bis Vorsprung {_pct(cfg["signals"]["hold_min_excess"])}.
+  Kalibrierung vom {_e(str(calib['created'])[:10])} · Universum {calib['universe_size']} Titel, nach Größenfilter {calib['size_filter']}.</p>
+  <h4>Erfolgskontrolle des Agenten</h4><p>{track_txt}</p>
+  <h4>Analysten nach Rang (Fünftel)</h4>{rk_txt}
+  <h4>Treffsicherheit im Testzeitraum</h4><p>{skill_txt}</p>
+  <h4>Horizonttest</h4>{hz_txt}
+  <h4>Rückblick-Test Technik</h4><p>{bt_txt}</p>
+  <h4>Analystenhäuser mit geringster Fehlervarianz</h4>
+  <table class="mini"><thead><tr><th>Haus</th><th class="num">Prognosen</th><th class="num">σ (8 Wo.)</th><th class="num">Verzerrung</th></tr></thead>
+  <tbody>{firm_rows}</tbody></table>
+  <p class="muted small">Fehlerkorrelation zwischen Häusern ρ_ff = {ca['rho_ff']:.2f}; Minimum-Varianz-Gewichte zur Hälfte Richtung Gleichgewichtung geschrumpft.
+  Restkorrelation Analyst/Technik ρ_v = {noise['rho_v']:.2f} (Annahme). Kursrauschen σε = {_pct(noise['sigma_eps2'] ** 0.5, 1, False)}.</p>
+</div></details>
 
 <footer>Automatisch erzeugt aus öffentlichen Marktdaten (Yahoo Finance). Ausstiegsregeln: Chance/Risiko unter
 {_sg(cfg['signals']['exit_cr'])}, Schlusskurs {cfg['signals']['gd200_break_days']} Tage unter GD 200 oder GD 50 kreuzt GD 200 nach unten.

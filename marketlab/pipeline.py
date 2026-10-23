@@ -316,7 +316,7 @@ def run_daily() -> dict:
     _save_json("kalman_state.json", kstate)
     _append_log(res, asof)
     track = _track_record(close, h, wl["ticker"].tolist())
-    return {"results": res, "calib": calib, "asof": asof, "cfg": cfg, "track": track}
+    return {"results": res, "calib": calib, "asof": asof, "cfg": cfg, "track": track, "prev": prev}
 
 
 def _track_record(close: pd.DataFrame, h: int, universe: list[str]) -> dict:
