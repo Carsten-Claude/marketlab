@@ -253,6 +253,10 @@ def run_daily() -> dict:
 
     extra = [t for t in depot.open_tickers() if t not in set(wl["ticker"])]   # Depot-Titel außerhalb der Watchlist
     close, idx_close = _prices_with_index(prov, wl["ticker"].tolist() + extra, 2, cfg)
+    # Stichtag = letzter Handelstag in den Kursdaten (nicht das Kalenderdatum): Wochenend- und
+    # Frühläufe werden so dem Tag zugeordnet, dessen Kurse sie tatsächlich verwenden.
+    asof = pd.Timestamp(close.index[-1]).normalize()
+    run_date = pd.Timestamp.today().normalize()
     ind = technical.indicators(close, idx_close, cfg["technical"])
     states = technical.state_frame(ind)
 
@@ -318,7 +322,8 @@ def run_daily() -> dict:
     _append_log(res, asof)
     track = _track_record(close, h, wl["ticker"].tolist())
     depots = depot.update(res, close, asof)
-    return {"results": res, "calib": calib, "asof": asof, "cfg": cfg, "track": track, "prev": prev, "depots": depots}
+    return {"results": res, "calib": calib, "asof": asof, "cfg": cfg, "track": track, "prev": prev, "depots": depots,
+            "run_date": run_date}
 
 
 def _track_record(close: pd.DataFrame, h: int, universe: list[str]) -> dict:

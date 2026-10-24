@@ -293,7 +293,9 @@ def render(run: dict, path: str | None = None) -> str:
                   f"(Trefferquote {_pct(bt['hit_top'], 0, False)}) gegenüber {_pct(bt['mean_all'])} "
                   f"({_pct(bt['hit_all'], 0, False)}) im Durchschnitt.")
 
-    stamp = f"{WEEKDAY[asof.weekday()]}, {asof.strftime('%d.%m.%Y')}"
+    rd = run.get("run_date", asof)
+    stamp = (f"{WEEKDAY[rd.weekday()]}, {rd.strftime('%d.%m.%Y')} · Kurse vom {WEEKDAY[asof.weekday()][:2]} "
+             f"{asof.strftime('%d.%m.')}")
     banner = ('<div class="warn">Testlauf mit synthetischen Daten – keine echten Kurse.</div>' if synth else "")
     if calib.get("analysts_reused"):
         banner += (f'<div class="warn">Analystendaten beim letzten Monatslauf nicht abrufbar – '

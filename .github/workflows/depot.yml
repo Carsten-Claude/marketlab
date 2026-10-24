@@ -1,7 +1,8 @@
 name: MarketLab Musterdepot
 
-# Buchung per Klick: Die Buttons im Dashboard öffnen ein vorausgefülltes Issue
-# „Depot: Kauf TICKER“ bzw. „Depot: Verkauf TICKER“. Nur Issues des Repository-Inhabers werden verarbeitet.
+# Buchung per Klick: Die Buttons im Dashboard öffnen ein vorausgefülltes Issue „Depot: Kauf TICKER“ bzw.
+# „Depot: Verkauf TICKER“. Jeder Lauf sammelt ALLE offenen Depot-Issues des Repository-Inhabers ein;
+# ein Issue wird erst geschlossen, wenn die Buchung gespeichert ist. Verworfene Läufe holt der nächste Lauf nach.
 on:
   issues:
     types: [opened]
@@ -21,28 +22,26 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Buchung vormerken und Tageslauf ausführen
+      - name: Offene Depot-Anfragen buchen und Dashboard aktualisieren
         env:
-          DEPOT_TITLE: ${{ github.event.issue.title }}
-          DEPOT_ISSUE: ${{ github.event.issue.number }}
-        run: python run.py request
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python run.py sweep
       - name: Ergebnis sichern
         run: |
           git config user.name "marketlab-bot"
           git config user.email "marketlab-bot@users.noreply.github.com"
           git add state docs
-          git commit -m "Musterdepot: Issue #${{ github.event.issue.number }}" || echo "keine Änderungen"
-          git push
-      - name: Issue mit Ergebnis schließen
-        if: always()
+          git commit -m "Musterdepot $(date -u +%F)" || echo "keine Änderungen"
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && exit 0; sleep 10; done
+          exit 1
+      - name: Bearbeitete Depot-Anfragen schließen
         env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ github.event.issue.number }}
-        run: |
-          STATUS=$(python -c "import pandas as pd,os; d=pd.read_csv('state/depot_requests.csv'); r=d[d['issue'].astype(str).str.replace(r'\.0$','',regex=True)==os.environ['ISSUE']]; print(r['status'].iloc[-1] if len(r) else 'nicht verarbeitet')" 2>/dev/null || echo "Fehler bei der Verarbeitung")
-          gh issue close "$ISSUE" --comment "Musterdepot: $STATUS. Das Dashboard ist in wenigen Minuten aktualisiert."
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python run.py close-issues

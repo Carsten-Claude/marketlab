@@ -62,9 +62,17 @@ def add_request(title: str, issue: str | int | None) -> str:
     if not TICKER_RE.match(tk):
         raise ValueError(f"Ungültiges Kürzel: {tk!r}")
     req = _load(REQUESTS, REQ_COLS)
+    if issue is not None and (req["issue"].astype(str).str.replace(r"\.0$", "", regex=True) == str(issue)).any():
+        return f"{action} {tk} (bereits erfasst)"
     req.loc[len(req)] = [pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%d %H:%M"), action, tk, issue, "offen"]
     _save(req, REQUESTS)
     return f"{action} {tk}"
+
+
+def reject_request(title: str, issue, status: str) -> None:
+    req = _load(REQUESTS, REQ_COLS)
+    req.loc[len(req)] = [pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%d %H:%M"), "?", str(title)[:40], issue, status]
+    _save(req, REQUESTS)
 
 
 # ---------------------------------------------------------------- Tagesverarbeitung

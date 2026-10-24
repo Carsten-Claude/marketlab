@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: marketlab
@@ -18,12 +19,16 @@ jobs:
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Lauf (beim ersten Mal inkl. Kalibrierung)
+      - name: Lauf (beim ersten Mal inkl. Kalibrierung, offene Depot-Anfragen werden mitgebucht)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           if [ ! -f state/calibration.json ]; then python run.py monthly; else python run.py daily; fi
       - name: Ergebnis sichern
@@ -32,4 +37,9 @@ jobs:
           git config user.email "marketlab-bot@users.noreply.github.com"
           git add state docs
           git commit -m "Tageslauf $(date -u +%F)" || echo "keine Änderungen"
-          git push
+          for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && exit 0; sleep 10; done
+          exit 1
+      - name: Bearbeitete Depot-Anfragen schließen
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python run.py close-issues

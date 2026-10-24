@@ -12,10 +12,13 @@ if __name__ == "__main__":
     if mode == "monthly":
         pipeline.run_monthly(use_web="--no-web" not in sys.argv)
         mode = "daily"   # direkt danach Dashboard aktualisieren
-    if mode == "request":   # Klick-Buchung: Titel kommt über die Umgebungsvariable DEPOT_TITLE
-        import os
-        from marketlab import depot
-        print("Vorgemerkt:", depot.add_request(os.environ.get("DEPOT_TITLE", ""), os.environ.get("DEPOT_ISSUE")))
+    if mode == "close-issues":   # nach erfolgreichem Speichern: bearbeitete Klick-Buchungen schließen
+        from marketlab import gh_issues
+        gh_issues.close_processed()
+        sys.exit(0)
+    if mode in ("daily", "sweep") and "GITHUB_TOKEN" in __import__("os").environ:
+        from marketlab import gh_issues
+        print("Offene Depot-Anfragen:", gh_issues.sweep())
         mode = "daily"
     if mode == "daily":
         run = pipeline.run_daily()
