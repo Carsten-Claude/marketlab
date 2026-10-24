@@ -16,7 +16,7 @@ if __name__ == "__main__":
         from marketlab import gh_issues
         gh_issues.close_processed()
         sys.exit(0)
-    if mode in ("daily", "sweep") and "GITHUB_TOKEN" in __import__("os").environ:
+    if mode in ("daily", "sweep") and "GITHUB_TOKEN" in __import__("os").environ and "GITHUB_REPOSITORY" in __import__("os").environ:
         from marketlab import gh_issues
         print("Offene Depot-Anfragen:", gh_issues.sweep())
         mode = "daily"
