@@ -4,3 +4,6 @@ requested,action,ticker,issue,status
 2026-10-24 08:54,Kauf,MNST,7,abgelehnt: bereits im Depot
 2026-10-24 12:30,Kauf,CSCO,8,gebucht: Kauf zu 106.50
 2026-10-24 12:31,Kauf,NVDA,9,gebucht: Kauf zu 210.96 (nachgetragen)
+2026-10-24 17:30,Kauf,CSCO,2,abgelehnt: bereits im Depot
+2026-10-24 17:30,Kauf,CSCO,6,abgelehnt: bereits im Depot
+2026-10-24 17:30,Kauf,NVDA,11,abgelehnt: bereits im Depot
