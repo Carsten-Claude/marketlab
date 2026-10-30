@@ -291,7 +291,7 @@ def run_daily() -> dict:
         fv_gap = (fv["fair_value"] / price - 1) if (fv["fair_value"] and fv_ok) else None
 
         results.append({
-            "ticker": tk, "name": w.name, "region": w.region, "currency": info.get("currency") or w.currency,
+            "ticker": tk, "name": w.name, "region": w.region, "sector": info.get("sector") or "", "currency": info.get("currency") or w.currency,
             "quality": w.quality, "price": price, "signal": sig["signal"], "reasons": sig["reasons"],
             "cr": sig["cr"], "x": fused["x"], "sd": float(np.sqrt(fused["var_static"])),
             "sd_total": float(np.sqrt(fused["var_static"] + calib["noise"]["sigma_eps2"])),
@@ -385,7 +385,8 @@ def _append_log(res: pd.DataFrame, asof: pd.Timestamp) -> None:
     """Signal-Protokoll für die spätere Erfolgsmessung des Agenten."""
     p = os.path.join(STATE, "signal_log.csv")
     cols = ["rank", "ticker", "signal", "price", "x", "mu", "excess", "sd", "cr", "r1", "r2", "w_analyst", "analyst_method"]
-    out = res[cols].copy()
+    cols += ["trend", "quintile", "sector"]          # Messgrößen für die Auswertung (keine Signalwirkung)
+    out = res.reindex(columns=cols).copy()
     out["version"] = MODEL_VERSION
     out.insert(0, "date", str(asof.date()))
     if os.path.exists(p):

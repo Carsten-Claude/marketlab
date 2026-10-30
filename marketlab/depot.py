@@ -165,9 +165,22 @@ def evaluate(book: pd.DataFrame, close: pd.DataFrame, res: pd.DataFrame) -> dict
             b = (win.ffill().iloc[-1] / win.bfill().iloc[0] - 1).dropna()
             bench = float(b.mean()) if len(b) else np.nan
         days = int(np.busday_count(start.date(), pd.Timestamp(end).date())) if pd.notna(end) else 0
+        # Nachlauf geschlossener Positionen: Entwicklung seit Ausbuchung ggü. Watchlist
+        # (misst, ob „Einstiegssignal beendet“ zu früh verkauft)
+        post_ret = post_ex = np.nan
+        post_days = 0
+        if not is_open:
+            now, _ = _last(close, tk)
+            pw = close.loc[close.index >= end, wl]
+            if now and len(pw) >= 2:
+                post_ret = now / price - 1
+                pb = (pw.ffill().iloc[-1] / pw.bfill().iloc[0] - 1).dropna()
+                post_ex = post_ret - float(pb.mean()) if len(pb) else np.nan
+                post_days = int(np.busday_count(end.date(), close.index[-1].date()))
         rows.append({"ticker": tk, "name": p["name"], "entry_date": p["entry_date"], "entry_price": float(p["entry_price"]),
                      "price": price, "ret": ret, "bench": bench, "excess": ret - bench if pd.notna(bench) else np.nan,
                      "days": days, "open": is_open, "exit_date": p["exit_date"], "exit_reason": p["exit_reason"],
+                     "post_ret": post_ret, "post_excess": post_ex, "post_days": post_days,
                      "stop": p["stop"], "signal_now": sigs.get(tk, "–"), "currency": cur.get(tk, "")})
     df = pd.DataFrame(rows)
     if df.empty:
@@ -179,5 +192,7 @@ def evaluate(book: pd.DataFrame, close: pd.DataFrame, res: pd.DataFrame) -> dict
             return None
         return {"n": int(len(d)), "ret": float(d["ret"].mean()), "excess": float(d["excess"].mean()),
                 "hit": float((d["excess"] > 0).mean())}
-    return {"positions": df.to_dict("records"), "n_open": int(df["open"].sum()), "n_closed": int((~df["open"]).sum()),
+    cl = df[~df["open"]].dropna(subset=["post_excess"])
+    post = {"n": int(len(cl)), "excess": float(cl["post_excess"].mean())} if len(cl) else None
+    return {"post": post, "positions": df.to_dict("records"), "n_open": int(df["open"].sum()), "n_closed": int((~df["open"]).sum()),
             "all": stats(df), "open_stats": stats(df[df["open"]]), "closed_stats": stats(df[~df["open"]])}

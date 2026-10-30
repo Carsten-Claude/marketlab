@@ -156,9 +156,13 @@ def _depot_table(d: dict, manual: bool) -> str:
             f"<tr><td><b>{_e(_nm(p['name']))}</b><br><span class='muted small'>{_e(p['ticker'])}</span></td>"
             f"<td class='num'>{pd.Timestamp(p['entry_date']).strftime('%d.%m.')}–{pd.Timestamp(p['exit_date']).strftime('%d.%m.')}</td>"
             f"<td class='num'><b>{_pct(p['ret'])}</b></td><td class='num'>{_pct(p['excess'])}</td>"
+            f"<td class='num'>{_pct(p.get('post_excess'))}<br><span class='muted small'>{p.get('post_days', 0)} Tage</span></td>"
             f"<td class='hide-s small'>{_e(p['exit_reason'])}</td></tr>" for p in cl[::-1])
         out += (f"<h4>Geschlossene Positionen ({len(cl)})</h4><table class='dt'><thead><tr><th>Titel</th><th class='num'>Zeitraum</th>"
-                f"<th class='num'>Rendite</th><th class='num'>ggü. Watchlist</th><th class='hide-s'>Grund</th></tr></thead><tbody>{crow}</tbody></table>")
+                f"<th class='num'>Rendite</th><th class='num'>ggü. Watchlist</th><th class='num'>seit Ausstieg ggü. Watchlist</th>"
+                f"<th class='hide-s'>Grund</th></tr></thead><tbody>{crow}</tbody></table>"
+                "<p class='muted small'>„seit Ausstieg“: Entwicklung nach der Ausbuchung im Vergleich zur Watchlist. "
+                "Positive Werte heißen, der Titel lief nach dem Verkauf besser als der Durchschnitt – das Signal endete zu früh.</p>")
     return out
 
 
@@ -169,8 +173,27 @@ def _depot_tile(title: str, d: dict) -> str:
     else:
         txt = (f"Ø ggü. Watchlist <b>{_pct(st['excess'])}</b> · besser als Watchlist in {_pct(st['hit'], 0, False)} · "
                f"Ø Rendite {_pct(st['ret'])}")
+        if d.get("post"):
+            txt += f" · nach Ausstieg {_pct(d['post']['excess'])} ggü. Watchlist (n = {d['post']['n']})"
     return (f"<div class='dtile'><div class='h'>{title}</div><div class='v'>{d.get('n_open', 0)} offen · "
             f"{d.get('n_closed', 0)} geschlossen</div><div class='small muted'>{txt}</div></div>")
+
+
+SECTOR_DE = {"Technology": "Technologie", "Consumer Defensive": "Basiskonsum", "Healthcare": "Gesundheit",
+             "Industrials": "Industrie", "Consumer Cyclical": "Zyklischer Konsum", "Communication Services": "Kommunikation",
+             "Financial Services": "Finanzen", "Basic Materials": "Grundstoffe", "Energy": "Energie",
+             "Utilities": "Versorger", "Real Estate": "Immobilien"}
+
+
+def _sector_mix(df: pd.DataFrame) -> str:
+    """Sektorverteilung der aktiven Einstiegssignale (reine Messgröße, keine Regel)."""
+    if "sector" not in df.columns or df.empty:
+        return ""
+    vc = df["sector"].fillna("").replace("", "ohne Angabe").map(lambda x: SECTOR_DE.get(x, x)).value_counts()
+    top = vc.iloc[0] / vc.sum()
+    txt = " · ".join(f"{_e(k)} {v}" for k, v in vc.items())
+    warn = (f" – <b>Klumpen</b>: {_pct(top, 0, False)} in einem Sektor" if vc.sum() >= 3 and top >= 0.5 else "")
+    return f"<p class='muted small'>Sektoren: {txt}{warn}</p>"
 
 
 def _card(r: pd.Series, kind: str) -> str:
@@ -362,6 +385,7 @@ def render(run: dict, path: str | None = None) -> str:
     active_html = ""
     if act:
         active_html = f'<div class="label">Aktive Einstiegssignale ({len(act)})</div><div class="cards">{"".join(act[:6])}</div>'
+        active_html += _sector_mix(res[res["signal"] == "Einstieg"])
         if len(act) > 6:
             active_html += (f'<details class="sec"><summary>Weitere {len(act) - 6} aktive Einstiegssignale</summary>'
                             f'<div class="secin"><div class="cards">{"".join(act[6:])}</div></div></details>')
