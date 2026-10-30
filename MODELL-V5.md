@@ -12,3 +12,16 @@ Ausstiegssignal oder Stopp. Vorher prüfen: Nachlauf „seit Ausstieg“ im Sign
 ## Bis dahin (Variante D)
 Signalregeln unverändert (Version 4). Zusätzlich gemessen: Sektoranteil der aktiven Signale, Nachlauf geschlossener
 Positionen, im Signal-Protokoll Trend, Analysten-Fünftel und Sektor je Titel.
+
+## Entscheidung 30.10.2026: A + B werden umgesetzt
+A – Binäre Einstiegsregel: oberstes Analysten-Fünftel UND Aufwärtstrend (keine Vorsprungs-/C/R-Schwelle).
+B – Für gehaltene Titel wird das Fünftel mit aktuellen Kurszielen, aber dem Einstiegskurs bestimmt
+    („Kursziel-Falle“: steigender Kurs verringert das Kurspotenzial und warf CSCO/DXCM aus F5).
+    Ausstiegssignal und Stopp bleiben unverändert.
+
+## Befund P2: Varianzen der beiden Quellen nicht vergleichbar (Fehler, mit V5 beheben)
+Analysten: var1 = Standardfehler² des Fünftel-Mittels (σ ≈ 0,2–0,5 %, schrumpft mit der Stichprobe).
+Technik:   var2 = Messrauschen einer Einzelprognose (σ_vT ≈ 6,5 %).
+Gleich definiert wären beide ähnlich groß (Analysten linear σ_vA ≈ 6,6 %). Folge heute: Analystengewicht ≈ 99 %,
+Chance/Risiko (Vorsprung/σ) systematisch überhöht. Mit einheitlicher Definition sinkt C/R auf ≈ 0,1–0,2;
+die Schwelle C/R > 1 wäre nie erfüllt – deshalb gemeinsam mit A umstellen.
