@@ -25,3 +25,9 @@ Technik:   var2 = Messrauschen einer Einzelprognose (σ_vT ≈ 6,5 %).
 Gleich definiert wären beide ähnlich groß (Analysten linear σ_vA ≈ 6,6 %). Folge heute: Analystengewicht ≈ 99 %,
 Chance/Risiko (Vorsprung/σ) systematisch überhöht. Mit einheitlicher Definition sinkt C/R auf ≈ 0,1–0,2;
 die Schwelle C/R > 1 wäre nie erfüllt – deshalb gemeinsam mit A umstellen.
+
+## P2-Test (Variante V2, Entscheidung 30.10.2026)
+Läuft ab dem Monatslauf 01.11.2026 mit (marketlab/p2test.py), Ergebnis in state/p2_test.md.
+Regel vorab: Prognosequelle nur, wenn Test 1 (Technik-Beitrag t ≥ 2 in Lern- und Testzeitraum) und
+Test 2 (Fusion trennt bestes Fünftel besser als Analysten allein) bestanden; sonst Filter, sofern Test 3 dafür spricht.
+Rohdaten der Analystenprognosen werden in state/analyst_obs.csv.gz gespeichert.

@@ -120,6 +120,7 @@ def run_monthly(use_web: bool = True) -> None:
     hist = {tk: prov.analyst_targets(tk) for tk in big["ticker"] if region_suffix(tk) == ""}
     calib_a = analysts.calibrate(hist, close, h, cfg["analysts"])
     skill_a = analysts.skill_test(calib_a.get("obs"), cut, cfg["analysts"])
+    obs_raw = calib_a.get("obs")   # Rohdaten für Zusatzauswertungen (P2-Test), vor möglicher Wiederverwendung
 
     # Datenausfall absichern: zu wenige Analystendaten -> letzte gute Analysten-Kalibrierung behalten
     prev = _load_json("calibration.json")
@@ -169,6 +170,9 @@ def run_monthly(use_web: bool = True) -> None:
     # 6) Horizonttest: Treffsicherheit beider Quellen für alternative Horizonte
     horizon_test = _horizon_test(close, states, hist, cut, cfg)
 
+    # 7) P2-Test (Chartanalyse: Informationsquelle oder Filter?) – abgesichert, ohne Einfluss auf das Modell
+    _p2_test(obs_raw, close, states, cut, h, cfg, noise)
+
     os.makedirs(STATE, exist_ok=True)
     wl.to_csv(os.path.join(STATE, "watchlist.csv"), index=False)
     _save_json("fundamentals.json", {k: v for k, v in fund.items() if k in set(wl["ticker"])})
@@ -178,6 +182,24 @@ def run_monthly(use_web: bool = True) -> None:
         "technical": calib_t, "analysts": {k: v for k, v in calib_a.items() if k != "obs"},
         "rho": rho, "noise": noise, "backtest": backtest, "horizon_test": horizon_test, "universe_size": int(len(uni)), "size_filter": int(len(big)),
     })
+
+
+def _p2_test(obs, close, states, cut, h, cfg, noise) -> None:
+    from . import p2test
+    try:
+        os.makedirs(STATE, exist_ok=True)
+        if obs is not None and len(obs) >= cfg["analysts"].get("min_total_obs", 2000):
+            obs.to_csv(os.path.join(STATE, "analyst_obs.csv.gz"), index=False)   # spätere Tests ohne Neuabruf
+        elif os.path.exists(os.path.join(STATE, "analyst_obs.csv.gz")):
+            obs = pd.read_csv(os.path.join(STATE, "analyst_obs.csv.gz"), parse_dates=["date"])
+            log.info("P2-Test: Analystenprognosen aus gespeichertem Bestand (%s)", len(obs))
+        r = p2test.run(obs, close, states, cut, h, cfg, noise)
+        r["created"] = datetime.now(timezone.utc).isoformat()
+        _save_json("p2_test.json", r)
+        with open(os.path.join(STATE, "p2_test.md"), "w", encoding="utf-8") as f:
+            f.write(p2test.report(r))
+    except Exception as exc:  # noqa: BLE001 – Auswertung darf den Monatslauf nie gefährden
+        log.exception("P2-Test fehlgeschlagen: %s", exc)
 
 
 def _horizon_test(close, states, hist, cut, cfg) -> list[dict]:
