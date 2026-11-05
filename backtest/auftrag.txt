@@ -1,0 +1,1 @@
+Rückrechnung V5 – Auftrag 2026-11-05 00:48 UTC: R0 V4-nah, R1 A+B, R2 A+B+Sperre, R3 feste Haltedauer

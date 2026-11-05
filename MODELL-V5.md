@@ -31,3 +31,12 @@ Läuft ab dem Monatslauf 01.11.2026 mit (marketlab/p2test.py), Ergebnis in state
 Regel vorab: Prognosequelle nur, wenn Test 1 (Technik-Beitrag t ≥ 2 in Lern- und Testzeitraum) und
 Test 2 (Fusion trennt bestes Fünftel besser als Analysten allein) bestanden; sonst Filter, sofern Test 3 dafür spricht.
 Rohdaten der Analystenprognosen werden in state/analyst_obs.csv.gz gespeichert.
+
+## Ergebnis P2-Test (01.11.2026): Chartanalyse = nur Filter
+Technik ohne Zusatzinformation im Testzeitraum (t = 0,02); korrigierte Fusion verschlechtert die Auswahl
+(Spreizung −0,53 % statt +0,46 %); Trendfilter in F5 +1,96 % Vorsprung (t = 2,32). Folge: Technik als
+Prognosequelle raus, Trend bleibt Filter; Varianzkorrektur der Fusion entfällt.
+
+## Ergänzung 05.11.2026: Sperre für Wiedereinstieg
+Arista 03.11. Ausstieg (GD-200-Bruch) zu 164,14, 04.11. Wiedereinstieg zu 169,91. Vorschlag: nach Ausstiegssignal
+Wiedereinstieg erst nach 5 Schlusskursen über GD 200. Rückrechnung: marketlab/backtest_v5.py → state/backtest_v5.md.
