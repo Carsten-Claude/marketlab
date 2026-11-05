@@ -1,0 +1,5 @@
+ticker,name,entry_date,entry_price,stop,exit_date,exit_price,exit_reason
+ANET,"Arista Networks, Inc.",2026-11-05,178.47999572753906,147.9893223287673,,,
+MNST,Monster Beverage Corporation,2026-11-05,48.75,44.734995287487415,,,
+APH,Amphenol Corporation,2026-11-05,79.01000213623047,67.36551966269451,,,
+CSCO,"Cisco Systems, Inc.",2026-11-05,103.61000061035156,92.08601296397495,,,
