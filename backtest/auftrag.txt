@@ -1,1 +1,1 @@
-Rückrechnung V5 – Auftrag 2026-11-05 00:50 UTC: + R4 V4-nah+Sperre, Kosten 0,2 % je Trade
+Rückrechnung V5 – Auftrag 2026-11-05 00:51 UTC: Sperre auch nach Ausstieg unter GD 200

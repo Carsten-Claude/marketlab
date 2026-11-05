@@ -8,7 +8,8 @@ Oberstes Fünftel F5: pA über der 80-%-Grenze des Lernzeitraums (wie im Live-Mo
 Regeln (je Titel höchstens eine Position, Ein-/Ausstieg zum Schlusskurs, gleiche Beträge, ohne Gebühren):
   R0  V4-nah     Einstieg F5 + Aufwärtstrend; Ende, sobald F5 (aktueller Kurs) oder Aufwärtstrend fehlt
   R1  A+B        Einstieg F5 + Aufwärtstrend; Ende nur, wenn F5 mit Einstiegskurs verloren geht
-  R2  A+B+Sperre wie R1; nach GD-200-Bruch/Todeskreuz Wiedereinstieg erst nach 5 Schlusskursen über GD 200
+  R2  A+B+Sperre wie R1; nach Ausstiegssignal oder Ausstieg unter GD 200 Wiedereinstieg erst nach 5 Schlusskursen über GD 200
+  R4  V4-nah+Sperre wie R0 mit derselben Sperre
   R3  Referenz   Einstieg wie R1, feste Haltedauer h Tage (prüft die Einstiegsregel allein)
 Für R0–R2 gelten zusätzlich Ausstiegsereignisse (GD-200-Bruch an 2 Tagen, Todeskreuz) und der Stopp.
 Messlatte: gleichgewichtete Rendite aller Titel mit Analystendaten (selbes Universum).
@@ -115,6 +116,8 @@ def _sim(rule: str, tick, close, ind, pA, mean_lt, mean_b, e4, start, end, h, sc
                     pa_entry = (lt[i] - np.log(entry)) * h / 252 + mb[i] if np.isfinite(lt[i]) else np.nan
                     if not (np.isfinite(pa_entry) and pa_entry >= e4):
                         reason = "Signal beendet"
+            if reason and c[i] < s200[i]:
+                lock = True          # Ausstieg unter GD 200: Wiedereinstieg erst nach 5 Schlusskursen darüber
             if reason or i == i1 - 1:
                 trades.append((tk, dates[pos], dates[i], entry, c[i], reason or "offen am Ende", days_in))
                 pos = None
