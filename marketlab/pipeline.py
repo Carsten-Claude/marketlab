@@ -277,6 +277,12 @@ def run_daily() -> dict:
     close, idx_close = _prices_with_index(prov, wl["ticker"].tolist() + extra, 2, cfg)
     # Stichtag = letzter Handelstag in den Kursdaten (nicht das Kalenderdatum): Wochenend- und
     # Frühläufe werden so dem Tag zugeordnet, dessen Kurse sie tatsächlich verwenden.
+    # Nur abgeschlossene Handelstage: um 05:05 UTC handeln die Börsen in Asien bereits, Yahoo liefert für
+    # sie eine Zeile des laufenden Tages mit Zwischenkursen (USA/Europa leer). Diese Zeile wird verworfen,
+    # damit alle Titel auf Schlusskursen desselben Tages beruhen.
+    today_utc = pd.Timestamp.now(tz="UTC").tz_localize(None).normalize()
+    close = close[close.index < today_utc]
+    idx_close = idx_close[idx_close.index < today_utc] if hasattr(idx_close, "index") else idx_close
     asof = pd.Timestamp(close.index[-1]).normalize()
     run_date = pd.Timestamp.today().normalize()
     ind = technical.indicators(close, idx_close, cfg["technical"])
