@@ -132,7 +132,7 @@ def _depot_btn(tk: str) -> str:
     return f"<a class='dbtn' href='{url}' target='_blank' rel='noopener'>＋ Ins Musterdepot</a>"
 
 
-def _depot_table(d: dict, manual: bool) -> str:
+def _depot_table(d: dict, manual: bool, show_signal: bool = True) -> str:
     pos = d.get("positions") or []
     op = [p for p in pos if p["open"]]
     cl = [p for p in pos if not p["open"]]
@@ -141,14 +141,14 @@ def _depot_table(d: dict, manual: bool) -> str:
                 if manual else "Jedes neue Einstiegssignal wird automatisch aufgenommen.") + "</p>")
     sig_lbl = {"Einstieg": "Einstieg", "Ausstieg": "<span style='color:var(--crit)'>Ausstieg</span>", "Halten": "Halten"}
     head = ("<tr><th>Titel</th><th class='num'>seit</th><th class='num'>Einstand</th><th class='num'>Kurs</th>"
-            "<th class='num'>Rendite</th><th class='num'>ggü. Watchlist</th><th class='hide-s'>Signal heute</th>"
+            "<th class='num'>Rendite</th><th class='num'>ggü. Watchlist</th>" + ("<th class='hide-s'>Signal V4 heute</th>" if show_signal else "")
             + ("<th></th>" if manual else "") + "</tr>")
     rows = "".join(
         f"<tr><td><b>{_e(_nm(p['name']))}</b><br><span class='muted small'>{_e(p['ticker'])}</span></td>"
         f"<td class='num'>{pd.Timestamp(p['entry_date']).strftime('%d.%m.')}<br><span class='muted small'>{p['days']} Tage</span></td>"
         f"<td class='num'>{_num(p['entry_price'])}</td><td class='num'>{_num(p['price'])}</td>"
         f"<td class='num'><b>{_pct(p['ret'])}</b></td><td class='num'>{_pct(p['excess'])}</td>"
-        f"<td class='hide-s'>{sig_lbl.get(p['signal_now'], _e(p['signal_now']))}</td>"
+        + (f"<td class='hide-s'>{sig_lbl.get(p['signal_now'], _e(p['signal_now']))}</td>" if show_signal else "")
         + (f"<td>{_depot_btn(p['ticker'])}</td>" if manual else "") + "</tr>" for p in op)
     out = f"<table class='dt'><thead>{head}</thead><tbody>{rows or '<tr><td colspan=8 class=muted>Keine offenen Positionen.</td></tr>'}</tbody></table>"
     if cl:
@@ -340,6 +340,22 @@ def render(run: dict, path: str | None = None) -> str:
                   f"<details class='sec'><summary>Mein Depot – {depots['manual'].get('n_open', 0)} offen</summary><div class='secin'>"
                   f"<p class='muted small'>Deine Auswahl per Klick. Ausführung zum letzten Schlusskurs; die Buchung erscheint etwa "
                   f"5 Minuten nach dem Bestätigen auf GitHub.</p>{_depot_table(depots['manual'], True)}</div></details>")
+    v5 = depots.get("v5")
+    if v5:
+        v4p = v5.get("v4_same_period") or {}
+        st5, st4 = v5.get("all"), v4p.get("all")
+        cmp_ = (f"Seit {pd.Timestamp(v5['start']).strftime('%d.%m.%Y')}: Version 5 Ø {_pct(st5['excess']) if st5 else '–'} ggü. Watchlist "
+                f"({v5.get('n_open', 0) + v5.get('n_closed', 0)} Positionen) · Version 4 Ø {_pct(st4['excess']) if st4 else '–'} "
+                f"({v4p.get('n_open', 0) + v4p.get('n_closed', 0)} Positionen)")
+        locks = v5.get("locks") or {}
+        lock_txt = ("Gesperrt für Wiedereinstieg: " + ", ".join(f"{_e(t)} (seit {pd.Timestamp(d_).strftime('%d.%m.')})" for t, d_ in locks.items())
+                    if locks else "Keine Wiedereinstiegssperre aktiv.")
+        depot_secs += (f"<details class='sec'><summary>Schattenbetrieb Version 5 – {v5.get('n_open', 0)} offen</summary><div class='secin'>"
+                       f"<p class='small'><b>{cmp_}</b></p>"
+                       f"<p class='muted small'>Läuft parallel, Version 4 bleibt maßgeblich. Regel R2: Einstieg bei oberstem Analysten-Fünftel "
+                       f"und Aufwärtstrend; Ende, wenn das Fünftel mit dem Einstiegskurs verloren geht, bei Ausstiegssignal oder Stopp. "
+                       f"Nach Ausstiegssignal oder Ausstieg unter GD 200 Wiedereinstieg erst nach 5 Schlusskursen über GD 200. "
+                       f"{lock_txt}</p>{_depot_table(v5, False, show_signal=False)}</div></details>")
 
     # ---- Tagesbrief: Veränderungen gegenüber dem Vortag
     prev = run.get("prev") or {}

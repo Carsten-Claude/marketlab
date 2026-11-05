@@ -44,7 +44,7 @@ def _save(df: pd.DataFrame, path: str) -> None:
 
 def open_tickers() -> list[str]:
     out = set()
-    for p in (SIGNAL, MANUAL):
+    for p in (SIGNAL, MANUAL, os.path.join(STATE, "depot_v5.csv")):
         d = _load(p, COLS)
         out |= set(d.loc[d["exit_date"].isna(), "ticker"])
     req = _load(REQUESTS, REQ_COLS)

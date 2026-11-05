@@ -319,7 +319,7 @@ def run_daily() -> dict:
             "sd_total": float(np.sqrt(fused["var_static"] + calib["noise"]["sigma_eps2"])),
             "x_static": fused["x_static"], "w_analyst": fused["w1"], "w_tech": fused["w2"],
             "r1": a["r1"], "sd1": float(np.sqrt(a["var1"])) if a["var1"] else None,
-            "analyst_method": a["method"], "analyst_detail": a["detail"], "quintile": a.get("quintile"),
+            "analyst_method": a["method"], "analyst_detail": a["detail"], "quintile": a.get("quintile"), "fc": a.get("fc"),
             "r2": r2, "sd2": float(np.sqrt(v2)), "tech_state": technical.describe_key(key) if key else "n/a",
             "tech_n": n2, "stop": sig["stop"], "trend": sig["trend"], "events": sig["events"],
             "rsi": _last(ind["rsi"], tk), "pct_b": _last(ind["pct_b"], tk),
@@ -344,6 +344,11 @@ def run_daily() -> dict:
     _append_log(res, asof)
     track = _track_record(close, h, wl["ticker"].tolist())
     depots = depot.update(res, close, asof)
+    try:   # Schattenbetrieb Version 5 – darf den Lauf von Version 4 nie beeinflussen
+        from . import shadow_v5
+        depots["v5"] = shadow_v5.update(res, close, ind, asof, calib["analysts"].get("rank") or {}, h)
+    except Exception as exc:  # noqa: BLE001
+        log.exception("Schattenbetrieb V5 fehlgeschlagen: %s", exc)
     return {"results": res, "calib": calib, "asof": asof, "cfg": cfg, "track": track, "prev": prev, "depots": depots,
             "run_date": run_date}
 
