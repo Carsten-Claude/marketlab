@@ -30,7 +30,8 @@ from .data import get_provider
 
 log = logging.getLogger("marketlab.backtest")
 STATE = pipeline.STATE
-RULES = {"R0": "V4-nah", "R1": "A+B", "R2": "A+B+Sperre", "R3": "Referenz: feste Haltedauer"}
+RULES = {"R0": "V4-nah", "R4": "V4-nah+Sperre", "R1": "A+B", "R2": "A+B+Sperre", "R3": "Referenz: feste Haltedauer"}
+COST_RT = 0.002   # angenommene Kosten je Kauf+Verkauf (Spread, Gebühr): 0,2 %
 
 
 def _panel(obs: pd.DataFrame, close: pd.DataFrame, cut: pd.Timestamp, h: int, cfg: dict):
@@ -90,7 +91,7 @@ def _sim(rule: str, tick, close, ind, pA, mean_lt, mean_b, e4, start, end, h, sc
             if lock and (c[i - 4:i + 1] > s200[i - 4:i + 1]).all():
                 lock = False
             if pos is None:
-                if f5 and up and not (rule == "R2" and lock):
+                if f5 and up and not (rule in ("R2", "R4") and lock):
                     rr = r[max(i - 251, 1):i + 1]
                     rr = rr[np.isfinite(rr)]
                     ms = rr.std() * np.sqrt(21) if len(rr) >= 60 else np.nan
@@ -108,7 +109,7 @@ def _sim(rule: str, tick, close, ind, pA, mean_lt, mean_b, e4, start, end, h, sc
                     reason, lock = "Ausstiegssignal", True
                 elif c[i] <= stop:
                     reason = "Stopp"
-                elif rule == "R0" and not (f5 and up):
+                elif rule in ("R0", "R4") and not (f5 and up):
                     reason = "Signal beendet"
                 elif rule in ("R1", "R2"):
                     pa_entry = (lt[i] - np.log(entry)) * h / 252 + mb[i] if np.isfinite(lt[i]) else np.nan
@@ -158,6 +159,8 @@ def _stats(t, held, close, tick, start, end, bench_ret):
             "reasons": t["reason"].value_counts().to_dict(),
             "avg_positions": float(h_.sum(axis=1).mean()),
             "port_excess_pa": float(exd.mean() * 252), "port_excess_pa_se": se_pa,
+            # Kosten: Trades/Jahr × Kosten je Trade / Ø Positionen (gleichgewichtetes Depot)
+            "cost_pa": float(len(t) / yrs * COST_RT / max(float(h_.sum(axis=1).mean()), 1.0)) if yrs else None,
             "whip_per_year": float(t["whipsaw"].sum() / yrs) if yrs else None, "port_te_pa": float(exd.std() * np.sqrt(252)),
             "port_ir": float(exd.mean() / exd.std() * np.sqrt(252)) if exd.std() > 0 else None,
             "port_maxdd": dd, "bench_pa": float(b.mean() * 252), "port_pa": float(port.mean() * 252)}
@@ -200,15 +203,15 @@ def report(r: dict) -> str:
              "Regeln: " + " · ".join(f"{k} {v}" for k, v in r["rules"].items()) + "\n"]
     for per, res in r["periods"].items():
         lines += [f"\n## {per}\n",
-                  "| Regel | Vorsprung p. a. (Depot) | ± | t | Trades/Jahr | Ø Haltedauer (Tage) | Treffer je Trade | Hin-und-Her/Jahr | Kosten Hin-und-Her | Ø Positionen | Max. Rückgang Depot |",
-                  "|---|---|---|---|---|---|---|---|---|---|---|"]
+                  "| Regel | Vorsprung p. a. (Depot) | ± | t | nach Kosten | Trades/Jahr | Ø Haltedauer (Tage) | Treffer je Trade | Hin-und-Her/Jahr | Kosten Hin-und-Her | Ø Positionen | Max. Rückgang Depot |",
+                  "|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for k, s in res.items():
             if not s.get("trades"):
                 lines.append(f"| {k} {r['rules'][k]} | 0 | | | | | | | | | |")
                 continue
             se = s.get("port_excess_pa_se")
             tv = s["port_excess_pa"] / se if se and np.isfinite(se) and se > 0 else None
-            lines.append(f"| {k} {r['rules'][k]} | {p(s['port_excess_pa'], 1)} | {p(se, 1)} | {f(tv)} | {f(s['per_year'], 0)} | {f(s['avg_days'])} | "
+            lines.append(f"| {k} {r['rules'][k]} | {p(s['port_excess_pa'], 1)} | {p(se, 1)} | {f(tv)} | {p(s['port_excess_pa'] - (s.get('cost_pa') or 0), 1)} | {f(s['per_year'], 0)} | {f(s['avg_days'])} | "
                          f"{s['hit']:.0%} | {f(s['whip_per_year'])} | {p(s['whip_cost_sum'], 1)} | {f(s['avg_positions'])} | "
                          f"{p(s['port_maxdd'], 1)} |")
         lines.append("\nAusstiegsgründe: " + " · ".join(
@@ -216,7 +219,8 @@ def report(r: dict) -> str:
     lines.append("\nHin-und-Her: Wiedereinstieg im selben Titel innerhalb von 10 Handelstagen zu höherem Kurs; "
                  "Kosten = Summe der Mehrpreise. Vorsprung p. a.: gleichgewichtetes Depot der gehaltenen Titel minus Messlatte; "
                  "Tage ohne Position zählen mit der Messlatte (Vorsprung 0). ± = Standardfehler über Monatsblöcke. "
-                 "Treffer: Anteil der Trades mit Vorsprung ggü. Messlatte im selben Zeitraum.")
+                 "Treffer: Anteil der Trades mit Vorsprung ggü. Messlatte im selben Zeitraum. "
+                 "Nach Kosten: 0,2 % je Kauf und Verkauf, umgelegt auf das gleichgewichtete Depot.")
     return "\n".join(lines) + "\n"
 
 
