@@ -40,3 +40,13 @@ Prognosequelle raus, Trend bleibt Filter; Varianzkorrektur der Fusion entfällt.
 ## Ergänzung 05.11.2026: Sperre für Wiedereinstieg
 Arista 03.11. Ausstieg (GD-200-Bruch) zu 164,14, 04.11. Wiedereinstieg zu 169,91. Vorschlag: nach Ausstiegssignal
 Wiedereinstieg erst nach 5 Schlusskursen über GD 200. Rückrechnung: marketlab/backtest_v5.py → state/backtest_v5.md.
+
+## Entscheidung 05.11.2026: Version 5 = R2 (A + B + Sperre)
+Rückrechnung (state/backtest_v5.md), Testzeitraum nach Kosten: R2 +32,4 % p. a., R4 +32,6 %, R0 (V4-nah) +31,1 %;
+R2 mit halb so vielen Trades (64/Jahr), Haltedauer 54 Tage, Hin-und-Her −75 %. Kursziel-Falle in der Historie
+nicht renditewirksam; B wegen Robustheit und Horizont-Passung gewählt. Absolute Vorsprünge durch
+Überlebenden-Verzerrung überhöht, nur der Regelvergleich ist belastbar.
+Regeln V5: Einstieg = oberstes Analysten-Fünftel (aktuelle Kursziele, aktueller Kurs) + Aufwärtstrend;
+Ende = F5 mit Einstiegskurs verloren, Ausstiegssignal (GD-200-Bruch 2 Tage, Todeskreuz) oder Stopp;
+nach Ausstiegssignal oder Ausstieg unter GD 200 Wiedereinstieg erst nach 5 Schlusskursen über GD 200.
+Technik nur als Filter, keine Kalman-Gewichtung nach Messrauschen.
