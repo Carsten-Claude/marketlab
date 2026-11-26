@@ -6,6 +6,7 @@ import math
 import os
 import re
 
+import numpy as np
 import pandas as pd
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
