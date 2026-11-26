@@ -11,6 +11,8 @@ Regeln (je Titel höchstens eine Position, Ein-/Ausstieg zum Schlusskurs, gleich
   R2  A+B+Sperre wie R1; nach Ausstiegssignal oder Ausstieg unter GD 200 Wiedereinstieg erst nach 5 Schlusskursen über GD 200
   R4  V4-nah+Sperre wie R0 mit derselben Sperre
   R3  Referenz   Einstieg wie R1, feste Haltedauer h Tage (prüft die Einstiegsregel allein)
+  R5  V5.1       wie R2 mit Fix: Einstieg erst nach 5 Schlusskursen über GD 200; nach Stopp 10 Handelstage Pause
+  R6  V4-nah+Fix wie R4 mit demselben Fix
 Für R0–R2 gelten zusätzlich Ausstiegsereignisse (GD-200-Bruch an 2 Tagen, Todeskreuz) und der Stopp.
 Messlatte: gleichgewichtete Rendite aller Titel mit Analystendaten (selbes Universum).
 
@@ -31,7 +33,14 @@ from .data import get_provider
 
 log = logging.getLogger("marketlab.backtest")
 STATE = pipeline.STATE
-RULES = {"R0": "V4-nah", "R4": "V4-nah+Sperre", "R1": "A+B", "R2": "A+B+Sperre", "R3": "Referenz: feste Haltedauer"}
+RULES = {"R0": "V4-nah", "R4": "V4-nah+Sperre", "R6": "V4-nah+Sperre+Fix", "R2": "A+B+Sperre (V5)",
+         "R5": "A+B+Sperre+Fix (V5.1)", "R3": "Referenz: feste Haltedauer"}
+# Fix (V5.1): Einstieg erst nach 5 Schlusskursen über GD 200; nach Stopp 10 Handelstage kein Wiedereinstieg
+FIX = ("R5", "R6")
+LOCKED = ("R2", "R4", "R5", "R6")
+HOLD_B = ("R1", "R2", "R5")
+HOLD_V4 = ("R0", "R4", "R6")
+COOLDOWN = 10
 COST_RT = 0.002   # angenommene Kosten je Kauf+Verkauf (Spread, Gebühr): 0,2 %
 
 
@@ -80,7 +89,7 @@ def _sim(rule: str, tick, close, ind, pA, mean_lt, mean_b, e4, start, end, h, sc
         r = pd.Series(c).pct_change().values
         dates = close.index
         i0, i1 = dates.searchsorted(start), dates.searchsorted(end, side="right")
-        pos, entry, stop, lock, days_in = None, None, None, False, 0
+        pos, entry, stop, lock, days_in, cool = None, None, None, False, 0, -1
         for i in range(max(i0, 260), i1):
             if not np.isfinite(c[i]) or not np.isfinite(s200[i]):
                 continue
@@ -92,7 +101,8 @@ def _sim(rule: str, tick, close, ind, pA, mean_lt, mean_b, e4, start, end, h, sc
             if lock and (c[i - 4:i + 1] > s200[i - 4:i + 1]).all():
                 lock = False
             if pos is None:
-                if f5 and up and not (rule in ("R2", "R4") and lock):
+                fix_ok = rule not in FIX or (bool((c[i - 4:i + 1] > s200[i - 4:i + 1]).all()) and i > cool)
+                if f5 and up and fix_ok and not (rule in LOCKED and lock):
                     rr = r[max(i - 251, 1):i + 1]
                     rr = rr[np.isfinite(rr)]
                     ms = rr.std() * np.sqrt(21) if len(rr) >= 60 else np.nan
@@ -109,10 +119,10 @@ def _sim(rule: str, tick, close, ind, pA, mean_lt, mean_b, e4, start, end, h, sc
                 if brk or dc:
                     reason, lock = "Ausstiegssignal", True
                 elif c[i] <= stop:
-                    reason = "Stopp"
-                elif rule in ("R0", "R4") and not (f5 and up):
+                    reason, cool = "Stopp", i + COOLDOWN
+                elif rule in HOLD_V4 and not (f5 and up):
                     reason = "Signal beendet"
-                elif rule in ("R1", "R2"):
+                elif rule in HOLD_B:
                     pa_entry = (lt[i] - np.log(entry)) * h / 252 + mb[i] if np.isfinite(lt[i]) else np.nan
                     if not (np.isfinite(pa_entry) and pa_entry >= e4):
                         reason = "Signal beendet"
