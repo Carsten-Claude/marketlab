@@ -362,12 +362,14 @@ def render(run: dict, path: str | None = None) -> str:
     has_prev = bool(prev)
     by_sig = lambda s_: res[res["signal"] == s_]
     ent = by_sig("Einstieg")
-    new_in = ent[[prev.get(t) != "Einstieg" for t in ent["ticker"]]] if has_prev else ent
-    active = ent[[prev.get(t) == "Einstieg" for t in ent["ticker"]]] if has_prev else ent.iloc[0:0]
-    new_out = exits[[prev.get(t) != "Ausstieg" for t in exits["ticker"]]] if has_prev else exits.iloc[0:0]
+    # boolesche Masken als Series: eine leere Python-Liste würde pandas als (leere) Spaltenauswahl lesen
+    m = lambda df, f: df[df["ticker"].map(f).astype(bool)]
+    new_in = m(ent, lambda t: prev.get(t) != "Einstieg") if has_prev else ent
+    active = m(ent, lambda t: prev.get(t) == "Einstieg") if has_prev else ent.iloc[0:0]
+    new_out = m(exits, lambda t: prev.get(t) != "Ausstieg") if has_prev else exits.iloc[0:0]
     old_out = exits.drop(new_out.index)
-    ended = res[[prev.get(t) == "Einstieg" and sig != "Einstieg" and sig != "Ausstieg"
-                 for t, sig in zip(res["ticker"], res["signal"])]] if has_prev else res.iloc[0:0]
+    ended = res[np.array([prev.get(t) == "Einstieg" and sig != "Einstieg" and sig != "Ausstieg"
+                          for t, sig in zip(res["ticker"], res["signal"])], dtype=bool)] if has_prev else res.iloc[0:0]
 
     def names(df, cap=4):
         n_ = [_short(x) for x in df["name"]]
