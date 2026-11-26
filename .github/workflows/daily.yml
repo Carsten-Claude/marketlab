@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "5 5 * * 1-5"
   workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ["diag/tageslauf.txt"]   # Lauf außer der Reihe (Claude)
 
 permissions:
   contents: write
@@ -30,7 +33,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          if [ ! -f state/calibration.json ]; then python run.py monthly; else python run.py daily; fi
+          if [ ! -f state/calibration.json ]; then python run.py monthly; exit $?; fi
+          # Yahoo liefert gelegentlich kurzzeitig keine Daten: bis zu 3 Versuche im Abstand von 10 Minuten
+          for i in 1 2 3; do python run.py daily && exit 0; echo "Versuch $i fehlgeschlagen"; [ $i -lt 3 ] && sleep 600; done
+          exit 1
       - name: Ergebnis sichern
         run: |
           git config user.name "marketlab-bot"

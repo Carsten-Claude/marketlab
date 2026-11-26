@@ -334,6 +334,9 @@ def run_daily() -> dict:
             "fair_value": fv["fair_value"] if fv_ok else None, "fv_gap": fv_gap, "fv_ok": bool(fv_ok), **grow,
         })
     res = pd.DataFrame(results)
+    if res.empty or len(res) < 0.5 * len(wl):
+        # Datenausfall (z. B. Yahoo kurzzeitig ohne Antwort): nichts speichern, Dashboard bleibt beim letzten Stand
+        raise RuntimeError(f"Zu wenige bewertete Titel ({len(res)} von {len(wl)}) – Kursdaten unvollständig, Lauf abgebrochen")
     # Vorsprung gegenüber dem Watchlist-Median: entfernt die gemeinsame Marktdrift, die beide
     # Quellen jedem Titel gleichermaßen zuschreiben. Signale beruhen nur auf dem Vorsprung.
     mu = float(res["x"].median())
