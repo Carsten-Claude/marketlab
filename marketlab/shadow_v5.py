@@ -1,4 +1,12 @@
-"""Schattenbetrieb Modellversion 5 (Regel R2: A + B + Sperre), parallel zu Version 4.
+"""Schattenbetrieb Modellversion 5, parallel zu Version 4.
+
+Seit 27.11.2026 Regel R4 (Entscheidung nach Rückrechnung und drei Wochen Live-Betrieb):
+  Einstieg  oberstes Analysten-Fünftel (aktueller Kurs) UND Aufwärtstrend, keine Sperre aktiv
+  Ende      Fünftel oder Aufwärtstrend fehlt · Ausstiegssignal · Stopp · Titel verlässt die Watchlist
+  Sperre    wie unten
+Die Positionen der Regel R2 (05.–26.11.2026) liegen in depot_v5_r2.csv (am Umstellungstag ausgebucht).
+
+Bisherige Regel R2 (A + B + Sperre):
 
 Version 4 bleibt maßgeblich; dieses Depot dient dem Live-Vergleich bis zur Erfolgskontrolle.
   Einstieg  oberstes Analysten-Fünftel (aktuelle Kursziele, aktueller Kurs) UND Aufwärtstrend,
@@ -21,6 +29,9 @@ from . import depot
 from .analysts import _bucket
 
 V5 = os.path.join(depot.STATE, "depot_v5.csv")
+V5_R2 = os.path.join(depot.STATE, "depot_v5_r2.csv")
+RULE = os.path.join(depot.STATE, "v5_rule.txt")
+CURRENT_RULE = "R4"
 LOCKS = os.path.join(depot.STATE, "v5_locks.json")
 START = os.path.join(depot.STATE, "v5_start.txt")
 
@@ -34,6 +45,20 @@ def _f5_entry(rank: dict, fc, price: float, entry: float, h: int) -> bool:
 
 def update(res: pd.DataFrame, close: pd.DataFrame, ind: dict, asof: pd.Timestamp, rank: dict, h: int) -> dict:
     today = str(asof.date())
+    rule_now = open(RULE).read().strip() if os.path.exists(RULE) else "R2"
+    if rule_now != CURRENT_RULE and os.path.exists(V5):
+        # Regelwechsel: bisheriges Depot archivieren, offene Positionen zum Tageskurs ausbuchen, neu beginnen
+        old_book = depot._load(V5, depot.COLS)
+        for i, p in old_book[old_book["exit_date"].isna()].iterrows():
+            price, _ = depot._last(close, p["ticker"])
+            if price is not None:
+                old_book.loc[i, ["exit_date", "exit_price", "exit_reason"]] = [today, price, f"Regelwechsel auf {CURRENT_RULE}"]
+        depot._save(old_book, V5_R2)
+        os.remove(V5)
+        if os.path.exists(START):
+            os.remove(START)
+    with open(RULE, "w") as f:
+        f.write(CURRENT_RULE)
     if not os.path.exists(START):
         with open(START, "w") as f:
             f.write(today)
@@ -72,8 +97,8 @@ def update(res: pd.DataFrame, close: pd.DataFrame, ind: dict, asof: pd.Timestamp
                 reason, lock = "Ausstiegssignal: " + "; ".join(ev), True
             elif pd.notna(p["stop"]) and price <= float(p["stop"]):
                 reason = "Stopp erreicht"
-            elif not _f5_entry(rank, r.get("fc"), price, float(p["entry_price"]), h):
-                reason = "oberstes Fünftel mit Einstiegskurs verloren"
+            elif not (r.get("quintile") == 5 and r.get("trend") == 1):
+                reason = "Einstiegssignal beendet (Fünftel oder Aufwärtstrend fehlt)"
             sma = r.get("sma200")
             if reason and sma is not None and pd.notna(sma) and price < float(sma):
                 lock = True
@@ -101,4 +126,7 @@ def update(res: pd.DataFrame, close: pd.DataFrame, ind: dict, asof: pd.Timestamp
     out["v4_same_period"] = depot.evaluate(sig, close, res) if len(sig) else {"positions": [], "n_open": 0, "n_closed": 0}
     out["locks"] = locks
     out["start"] = start
+    out["rule"] = CURRENT_RULE
+    if os.path.exists(V5_R2):
+        out["r2_archive"] = depot.evaluate(depot._load(V5_R2, depot.COLS), close, res)
     return out

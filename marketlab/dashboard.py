@@ -349,13 +349,17 @@ def render(run: dict, path: str | None = None) -> str:
                 f"({v5.get('n_open', 0) + v5.get('n_closed', 0)} Positionen) · Version 4 Ø {_pct(st4['excess']) if st4 else '–'} "
                 f"({v4p.get('n_open', 0) + v4p.get('n_closed', 0)} Positionen)")
         locks = v5.get("locks") or {}
+        r2 = (v5.get("r2_archive") or {}).get("all")
+        r2_txt = (f"Vorgängerregel R2 (05.–26.11.): Ø {_pct(r2['excess'])} ggü. Watchlist, {r2['n']} Positionen, "
+                  f"besser als Watchlist in {r2['hit']:.0%}. ") if r2 else ""
         lock_txt = ("Gesperrt für Wiedereinstieg: " + ", ".join(f"{_e(t)} (seit {pd.Timestamp(d_).strftime('%d.%m.')})" for t, d_ in locks.items())
                     if locks else "Keine Wiedereinstiegssperre aktiv.")
         depot_secs += (f"<details class='sec'><summary>Schattenbetrieb Version 5 – {v5.get('n_open', 0)} offen</summary><div class='secin'>"
                        f"<p class='small'><b>{cmp_}</b></p>"
-                       f"<p class='muted small'>Läuft parallel, Version 4 bleibt maßgeblich. Regel R2: Einstieg bei oberstem Analysten-Fünftel "
-                       f"und Aufwärtstrend; Ende, wenn das Fünftel mit dem Einstiegskurs verloren geht, bei Ausstiegssignal oder Stopp. "
-                       f"Nach Ausstiegssignal oder Ausstieg unter GD 200 Wiedereinstieg erst nach 5 Schlusskursen über GD 200. "
+                       f"<p class='muted small'>Läuft parallel, Version 4 bleibt maßgeblich. Regel R4 (seit 27.11.): Einstieg bei oberstem "
+                       f"Analysten-Fünftel und Aufwärtstrend, ohne Schwellen; Ende, sobald Fünftel oder Aufwärtstrend fehlen, bei Ausstiegssignal "
+                       f"oder Stopp. Nach Ausstiegssignal oder Ausstieg unter GD 200 Wiedereinstieg erst nach 5 Schlusskursen über GD 200. "
+                       f"{r2_txt}"
                        f"{lock_txt}</p>{_depot_table(v5, False, show_signal=False)}</div></details>")
 
     # ---- Tagesbrief: Veränderungen gegenüber dem Vortag

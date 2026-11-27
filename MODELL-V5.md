@@ -50,3 +50,11 @@ Regeln V5: Einstieg = oberstes Analysten-Fünftel (aktuelle Kursziele, aktueller
 Ende = F5 mit Einstiegskurs verloren, Ausstiegssignal (GD-200-Bruch 2 Tage, Todeskreuz) oder Stopp;
 nach Ausstiegssignal oder Ausstieg unter GD 200 Wiedereinstieg erst nach 5 Schlusskursen über GD 200.
 Technik nur als Filter, keine Kalman-Gewichtung nach Messrauschen.
+
+## Entscheidung 27.11.2026: Schattenbetrieb auf R4 umgestellt
+Live 05.–26.11.: V4-Ausstiege richtig (Titel nach Ausstieg −6,5 % ggü. Watchlist, n = 13; „Mein Depot“ ohne
+Verkäufe −8,1 %). Rückrechnung 26.11. (Daten bis 04.09.2026), nach Kosten: R4 +23,2 % (Test) / +22,1 % (gesamt),
+R2 +21,5 % / +17,9 %. Fix „Einstieg nach 5 Schlusskursen über GD 200, Pause nach Stopp“ (R5/R6) ohne Nutzen – verworfen.
+Version 5 = R4: Einstieg oberstes Analysten-Fünftel + Aufwärtstrend (ohne Schwellen); Ende, sobald Fünftel oder Trend
+fehlen, bei Ausstiegssignal oder Stopp; Wiedereinstiegssperre nach Ausstieg unter GD 200. R2-Positionen archiviert in
+state/depot_v5_r2.csv.
